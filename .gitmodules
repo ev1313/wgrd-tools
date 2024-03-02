@@ -1,0 +1,3 @@
+[submodule "deps/etceterapp"]
+	path = deps/etceterapp
+	url = https://github.com/ev1313/etceterapp.git
