@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
   for (const auto &entry : fs::recursive_directory_iterator(modded_path)) {
     if (entry.is_regular_file()) {
       fs::path part = entry.path().lexically_relative(modded_path);
+      std::cout << "loading: " << entry << " " << part << std::endl;
 
       // unpack only once
       if(!modded_edats.contains(part.filename())) {
