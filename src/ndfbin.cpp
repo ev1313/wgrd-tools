@@ -316,7 +316,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Object").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Object").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -343,7 +343,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("TOPObject").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("TOPObject").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -370,7 +370,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Chunk").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Chunk").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -402,7 +402,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Class").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Class").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Property").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Property").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("String").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("String").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -502,7 +502,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Tran").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Tran").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -532,21 +532,18 @@ int main(int argc, char **argv) {
             lock(c)->get_field<Array>("imprs").lock()->length());
         },
         Int32ul::create())),
-      Field("improffsets", Rebuild::create(
-        [](std::weak_ptr<Base> c) {
-          std::vector<std::any> offsets;
+      Field("improffsets", RebuildManual::create(
+        [](std::weak_ptr<Base> c, std::iostream &stream) {
           size_t count = lock(c)->get<uint32_t>("count");
           size_t base_offset = lock(c)->get_offset("count");
 
           for(size_t i = 0; i < count; i++) {
-            uint32_t offset = 4*(count-1) + lock(c)->get_field<Array>("imprs").lock()->get_offset(i) - base_offset;
-            offsets.push_back(std::make_any<uint32_t>(offset));
-            spdlog::debug("improffsets: {} {}", i, offset);
+            uint32_t offset = lock(c)->get_field<Array>("imprs").lock()->get_offset(i) - base_offset - 4;
+            stream.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+            spdlog::debug("improffsets: @0x{:0x} {} calc 0x{:0x} base_offset 0x{:0x} impr_offset 0x{:0x}", (size_t)stream.tellp(), i, offset, base_offset, lock(c)->get_field<Array>("imprs").lock()->get_offset(i));
           }
-          spdlog::debug("improffsets assert: {} {}", offsets.size(), count);
-          custom_assert(offsets.size() == count);
-          return std::make_any<std::vector<std::any>>(offsets);
         },
+        [](std::weak_ptr<Base> c) -> size_t { return lock(c)->get<uint32_t>("count") * 4; },
         Array::create(
           [](std::weak_ptr<Base> c) {
             return lock(c)->get_parsed<uint32_t>("count");
@@ -594,7 +591,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Import").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Import").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -621,7 +618,7 @@ int main(int argc, char **argv) {
       Field("size", Rebuild::create(
           [](std::weak_ptr<Base> c) {
             return std::make_any<uint32_t>(
-                lock(c)->get_field<Area>("Export").lock()->get_ptr_size({}));
+                lock(c)->get_field<Area>("Export").lock()->get_ptr_size());
           },
           Int32ul::create())),
       Field("pad2", BytesConst::create("\x00\x00\x00\x00"s)),
@@ -677,6 +674,9 @@ int main(int argc, char **argv) {
     input.open(program.get("input"), std::ios::binary);
     NdfBin->parse(input);
 
+    spdlog::debug("parsed");
+    NdfBin->dbg_print_tree("");
+
     pugi::xml_document doc;
     auto root = doc.append_child("root");
     NdfBin->build_xml(root, "NdfBin");
@@ -688,7 +688,7 @@ int main(int argc, char **argv) {
     spdlog::debug("Load result: {}", result.description());
     NdfBin->parse_xml(doc.child("root").child("NdfBin"), "NdfBin", true);
 
-    std::fstream ofs(program.get("output") + "/ndfbin.bin", std::fstream::in | std::fstream::out | std::fstream::binary);
+    std::fstream ofs(program.get("output") + "/ndfbin.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
     NdfBin->build(ofs);
   }
 }
