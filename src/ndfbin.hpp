@@ -85,10 +85,10 @@ inline std::shared_ptr<Struct> get_ndfbin() {
                                     [](std::weak_ptr<Base> c) -> uint32_t {
                                       return lock(c)->get<uint32_t>("typeId");
                                     },
-                                    NDFField(0xAAAAAAAA, "TranReference",
+                                    NDFField(0xAAAAAAAA, "ImprReference",
                                              [p]() {
                                                return Struct::create(
-                                                   Field("tranIndex",
+                                                   Field("imprIndex",
                                                          Int32ul::create()));
                                              }),
                                     NDFField(0xBBBBBBBB, "ObjectReference",
