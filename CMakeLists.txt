@@ -37,6 +37,5 @@ target_link_libraries(edat PRIVATE etceterapp)
 
 add_executable(edat_helper
         src/edat_helper.cpp
-        src/edat_helper.cpp
 )
 target_link_libraries(edat_helper PRIVATE etceterapp)
