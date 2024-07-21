@@ -15,7 +15,9 @@ int main(int argc, char **argv) {
       .implicit_value(true)
       .help("Verbose output");
   program.add_argument("-p", "--pack").default_value(false).implicit_value(true).help("instead of parsing the input file, pack the input xml file into a ndfbin file");
+  program.add_argument("-c", "--class-db").default_value(false).implicit_value(true).help("when parsing the input file, also generate a class-db file");
 
+  std::setlocale(LC_NUMERIC, "en_US.UTF-8");
 
   try {
     program.parse_args(argc, argv);
@@ -44,15 +46,28 @@ int main(int argc, char **argv) {
     pugi::xml_document doc;
     auto root = doc.append_child("root");
     NdfBin->build_xml(root, "NdfBin");
-    std::string outpath = program.get("output") + "/ndfbin.xml";
+    fs::path out_filename = program.get("input");
+    out_filename = out_filename.filename();
+    out_filename.replace_extension(".xml");
+    std::string outpath = program.get("output") / out_filename;
     doc.save_file(outpath.c_str());
+
+    if(program.get<bool>("-c")) {
+      out_filename.replace_extension(".class-db.xml");
+      fs::path output_path = program.get("output") / out_filename;
+      generate_class_db(&doc, output_path);
+    }
+
   } else {
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(program.get("input").c_str());
     spdlog::debug("Load result: {}", result.description());
     NdfBin->parse_xml(doc.child("root").child("NdfBin"), "NdfBin", true);
 
-    std::fstream ofs(program.get("output") + "/ndfbin.bin", std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
+    fs::path out_filename = program.get("input");
+    out_filename = out_filename.filename();
+    out_filename.replace_extension(".ndfbin");
+    std::fstream ofs(program.get("output") / out_filename, std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
     NdfBin->build(ofs);
   }
 }

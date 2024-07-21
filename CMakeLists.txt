@@ -27,6 +27,9 @@ else ()
   set(VERSION_GIT_TAG "unknown")
 endif ()
 
+add_library(ndf src/ndf.cpp)
+target_include_directories(ndf PUBLIC .)
+
 add_executable(ndfbin src/ndfbin.cpp)
 target_link_libraries(ndfbin PRIVATE etceterapp)
 
@@ -39,3 +42,8 @@ add_executable(edat_helper
         src/edat_helper.cpp
 )
 target_link_libraries(edat_helper PRIVATE etceterapp)
+
+add_executable(ndf_helper
+        src/ndf_helper.cpp
+)
+target_link_libraries(ndf_helper PRIVATE ndf etceterapp)

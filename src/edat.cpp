@@ -1,14 +1,4 @@
-#include "array.hpp"
 #include "basic.hpp"
-#include "conditional.hpp"
-#include "helpers.hpp"
-#include "number.hpp"
-#include "pointer.hpp"
-#include "special.hpp"
-#include "string.hpp"
-#include "struct.hpp"
-
-#include "md5.h"
 
 #include "argparse/argparse.hpp"
 #include "edat.hpp"
@@ -47,6 +37,8 @@ int main(int argc, char **argv) {
     std::cout << program;
     exit(1);
   }
+
+  std::setlocale(LC_NUMERIC, "en_US.UTF-8");
 
   if (!program.get<bool>("-v")) {
     spdlog::set_level(spdlog::level::warn);

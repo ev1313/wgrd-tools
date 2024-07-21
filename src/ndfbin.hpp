@@ -10,6 +10,9 @@
 #include "string.hpp"
 #include "struct.hpp"
 
+#include <filesystem>
+namespace fs = std::filesystem;
+
 using namespace etcetera;
 using namespace std::string_literals;
 
@@ -498,7 +501,7 @@ inline std::shared_ptr<Struct> get_ndfbin() {
   auto IMPR = []() { return LazyBound::create([](std::weak_ptr<LazyBound> p) {
     return Struct::create(
       Field("tranIndex", Int32ul::create()),
-      Field("objectIndex", Int32ul::create()),
+      Field("index", Int32ul::create()),
       Field("count", Rebuild::create(
         [](std::weak_ptr<Base> c) {
           return std::make_any<uint32_t>(
@@ -643,4 +646,49 @@ inline std::shared_ptr<Struct> get_ndfbin() {
   );
 
   return NdfBin;
+}
+
+inline void generate_class_db(pugi::xml_document* doc, fs::path output_path) {
+  pugi::xml_document class_db_doc;
+  auto class_db_root = class_db_doc.append_child("root");
+  // generate class-db file
+  struct ClassDbItem {
+    std::string name;
+    bool written;
+  };
+  std::vector<ClassDbItem> class_db;
+  auto class_iterator = doc->child("root").child("NdfBin").child("toc0header").child("CLAS").children();
+  for(auto class_node : class_iterator) {
+    class_db.emplace_back(class_node.attribute("str").as_string(), false);
+  }
+  auto object_iterator = doc->child("root").child("NdfBin").child("toc0header").child("OBJE").children();
+  for(auto object_node : object_iterator) {
+    auto class_id = object_node.attribute("classIndex").as_uint();
+    assert(class_id < class_db.size());
+    if(!class_db[class_id].written) {
+
+      auto db_class_node = class_db_root.append_child("Class");
+      db_class_node.append_attribute("id") = class_id;
+      db_class_node.append_attribute("name") = class_db[class_id].name.c_str();
+
+      auto property_iterator = object_node.children();
+      for(auto property_node : property_iterator) {
+        auto property_id = property_node.attribute("propertyIndex").as_uint();
+        if(property_id == 2880154539) {
+          continue;
+        }
+        auto db_prop_node = db_class_node.append_child("Property");
+
+        db_prop_node.append_attribute("id") = property_id;
+        db_prop_node.append_attribute("typeId") = property_node.child("NDFType").attribute("typeId").as_uint();
+
+        auto property_name_iterator = doc->child("root").child("NdfBin").child("toc0header").child("PROP").children().begin();
+        std::advance(property_name_iterator, property_id);
+        db_prop_node.append_attribute("name") = property_name_iterator->attribute("str").as_string();
+      }
+
+      class_db[class_id].written = true;
+    }
+  }
+  class_db_doc.save_file(output_path.c_str());
 }

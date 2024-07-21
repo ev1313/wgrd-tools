@@ -1,0 +1,402 @@
+#include "ndf.hpp"
+
+std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndfbin_xml(size_t ndf_type, const pugi::xml_node& ndf_node) {
+  switch(ndf_type) {
+    case 0x0: {
+      return std::make_unique<NDFPropertyBool>();
+    }
+    case 0x1: {
+      return std::make_unique<NDFPropertyInt8>();
+    }
+    case 0x2: {
+      return std::make_unique<NDFPropertyInt32>();
+    }
+    case 0x3: {
+      return std::make_unique<NDFPropertyUInt32>();
+    }
+    case 0x5: {
+      return std::make_unique<NDFPropertyFloat32>();
+    }
+    case 0x6: {
+      return std::make_unique<NDFPropertyFloat64>();
+    }
+    case 0x7: {
+      return std::make_unique<NDFPropertyString>();
+    }
+    case 0x8: {
+      return std::make_unique<NDFPropertyWideString>();
+    }
+    case 0x9: {
+      size_t reference_type = ndf_node.child("Reference").child("Reference").attribute("typeId").as_uint();
+      if(reference_type == ReferenceType::Object) {
+        return std::make_unique<NDFPropertyObjectReference>();
+      } else if(reference_type == ReferenceType::Import) {
+        return std::make_unique<NDFPropertyImportReference>();
+      } else {
+        throw std::runtime_error(std::format("Unknown ReferenceType: {}", reference_type));
+      }
+    }
+    case 0xB: {
+      return std::make_unique<NDFPropertyF32_vec3>();
+    }
+    case 0xC: {
+      return std::make_unique<NDFPropertyF32_vec4>();
+    }
+    case 0xD: {
+      return std::make_unique<NDFPropertyColor>();
+    }
+    case 0xE: {
+      return std::make_unique<NDFPropertyS32_vec3>();
+    }
+    case 0x11: {
+      return std::make_unique<NDFPropertyList>();
+    }
+    case 0x12: {
+      return std::make_unique<NDFPropertyMap>();
+    }
+    case 0x18: {
+      return std::make_unique<NDFPropertyS16>();
+    }
+    case 0x19: {
+      return std::make_unique<NDFPropertyU16>();
+    }
+    case 0x1A: {
+      return std::make_unique<NDFPropertyGUID>();
+    }
+    case 0x1C: {
+      return std::make_unique<NDFPropertyPathReference>();
+    }
+    case 0x1D: {
+      return std::make_unique<NDFPropertyLocalisationHash>();
+    }
+    case 0x1F: {
+      return std::make_unique<NDFPropertyS32_vec2>();
+    }
+    case 0x21: {
+      return std::make_unique<NDFPropertyF32_vec2>();
+    }
+    case 0x22: {
+      return std::make_unique<NDFPropertyPair>();
+    }
+    default: {
+      throw std::runtime_error(std::format("Unknown NDFType: {}", ndf_type));
+    }
+  }
+}
+
+std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndf_xml(size_t ndf_type, const pugi::xml_node& ndf_node) {
+  if(ndf_type == 0x9) {
+    size_t reference_type = ndf_node.attribute("referenceType").as_uint();
+    if(reference_type == ReferenceType::Object) {
+      return std::make_unique<NDFPropertyObjectReference>();
+    } else if(reference_type == ReferenceType::Import) {
+      return std::make_unique<NDFPropertyImportReference>();
+    } else {
+      throw std::runtime_error(std::format("Unknown ReferenceType: {}", reference_type));
+    }
+  }
+  return get_property_from_ndfbin_xml(ndf_type, ndf_node);
+}
+
+void NDFPropertyBool::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("Boolean").child("Boolean").attribute("value").as_uint() == 1;
+  spdlog::debug("Boolean: {}", value);
+}
+
+void NDFPropertyBool::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Boolean").append_child("Boolean").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyInt8::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("Int8").child("Int8").attribute("value").as_int();
+  spdlog::debug("Int8: {}", value);
+}
+
+void NDFPropertyInt8::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Int8").append_child("Int8").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyInt32::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("Int32").child("Int32").attribute("value").as_int();
+  spdlog::debug("Int32: {}", value);
+}
+
+void NDFPropertyInt32::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Int32").append_child("Int32").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyUInt32::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("UInt32").child("UInt32").attribute("value").as_uint();
+  spdlog::debug("UInt32: {}", value);
+}
+
+void NDFPropertyUInt32::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("UInt32").append_child("UInt32").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyFloat32::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("Float32").child("Float32").attribute("value").as_float();
+  spdlog::debug("Float: {}", value);
+}
+
+void NDFPropertyFloat32::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Float32").append_child("Float32").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyFloat64::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("Float64").child("Float64").attribute("value").as_double();
+  spdlog::debug("Double: {}", value);
+}
+
+void NDFPropertyFloat64::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Float64").append_child("Float64").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyString::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  size_t string_idx = node.child("StringReference").child("StringReference").attribute("stringIndex").as_uint();
+  value = root->string_table[string_idx];
+  spdlog::debug("String: {}", value);
+}
+
+void NDFPropertyString::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  size_t string_idx = root->get_or_add_string(value);
+  node.append_child("StringReference").append_child("StringReference").append_attribute("stringIndex").set_value(string_idx);
+}
+
+void NDFPropertyWideString::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("WideString").child("WideString").attribute("str").as_string();
+  spdlog::debug("Wide String: {}", value);
+}
+
+void NDFPropertyWideString::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("WideString").append_child("WideString").append_attribute("str").set_value(value.c_str());
+}
+
+void NDFPropertyF32_vec3::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  x = node.child("F32_vec3").child("F32_vec3").attribute("x").as_float();
+  y = node.child("F32_vec3").child("F32_vec3").attribute("y").as_float();
+  z = node.child("F32_vec3").child("F32_vec3").attribute("z").as_float();
+  spdlog::debug("Vector3: ({}, {}, {})", x, y, z);
+}
+
+void NDFPropertyF32_vec3::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto vec3_node = node.append_child("F32_vec3").append_child("F32_vec3");
+  vec3_node.append_attribute("x").set_value(x);
+  vec3_node.append_attribute("y").set_value(y);
+  vec3_node.append_attribute("z").set_value(z);
+}
+
+void NDFPropertyF32_vec4::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  x = node.child("F32_vec4").child("F32_vec4").attribute("x").as_float();
+  y = node.child("F32_vec4").child("F32_vec4").attribute("y").as_float();
+  z = node.child("F32_vec4").child("F32_vec4").attribute("z").as_float();
+  w = node.child("F32_vec4").child("F32_vec4").attribute("w").as_float();
+  spdlog::debug("Vector4: ({}, {}, {}, {})", x, y, z, w);
+}
+
+void NDFPropertyF32_vec4::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto vec4_node = node.append_child("F32_vec4").append_child("F32_vec4");
+  vec4_node.append_attribute("x").set_value(x);
+  vec4_node.append_attribute("y").set_value(y);
+  vec4_node.append_attribute("z").set_value(z);
+  vec4_node.append_attribute("w").set_value(w);
+}
+
+void NDFPropertyColor::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  r = node.child("Color").child("Color").attribute("r").as_uint();
+  g = node.child("Color").child("Color").attribute("g").as_uint();
+  b = node.child("Color").child("Color").attribute("b").as_uint();
+  a = node.child("Color").child("Color").attribute("a").as_uint();
+  spdlog::debug("Color: ({}, {}, {}, {})", r, g, b, a);
+}
+
+void NDFPropertyColor::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto color_node = node.append_child("Color").append_child("Color");
+  color_node.append_attribute("r").set_value(r);
+  color_node.append_attribute("g").set_value(g);
+  color_node.append_attribute("b").set_value(b);
+  color_node.append_attribute("a").set_value(a);
+}
+
+void NDFPropertyS32_vec3::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  x = node.child("S32_vec3").child("S32_vec3").attribute("x").as_int();
+  y = node.child("S32_vec3").child("S32_vec3").attribute("y").as_int();
+  z = node.child("S32_vec3").child("S32_vec3").attribute("z").as_int();
+  spdlog::debug("Vector3: ({}, {}, {})", x, y, z);
+}
+
+void NDFPropertyS32_vec3::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto vec3_node = node.append_child("S32_vec3").append_child("S32_vec3");
+  vec3_node.append_attribute("x").set_value(x);
+  vec3_node.append_attribute("y").set_value(y);
+  vec3_node.append_attribute("z").set_value(z);
+}
+
+void NDFPropertyObjectReference::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  size_t object_idx = node.child("Reference").child("Reference").child("ObjectReference").child("ObjectReference").attribute("objectIndex").as_uint();
+  object_name = std::format("Object_{}", object_idx);
+  spdlog::debug("Object Reference: {}", object_name);
+}
+
+void NDFPropertyObjectReference::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  auto object_node = node.append_child("Reference").append_child("Reference").append_child("ObjectReference").append_child("ObjectReference");
+  size_t obj_idx = root->get_object(object_name);
+  object_node.append_attribute("objectIndex").set_value(obj_idx);
+}
+
+void NDFPropertyImportReference::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  size_t import_idx = node.child("Reference").child("Reference").child("ImprReference").child("ImprReference").attribute("imprIndex").as_uint();
+  spdlog::debug("Import Index: {}", import_idx);
+  import_name = root->import_name_table.at(import_idx);
+  spdlog::debug("Import Reference: {}", import_name);
+}
+
+void NDFPropertyImportReference::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  size_t import_idx = root->get_or_add_impr(import_name);
+  auto import_node = node.append_child("Reference").append_child("Reference").append_child("ImprReference").append_child("ImprReference");
+  import_node.append_attribute("imprIndex").set_value(import_idx);
+}
+
+void NDFPropertyList::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  for(auto const& value_node : node.child("List").child("List").children()) {
+    size_t sub_type = value_node.attribute("typeId").as_uint();
+    auto property = get_property_from_ndfbin_xml(sub_type, value_node);
+    property->from_ndfbin_xml(root, value_node);
+    property->property_name = "ListItem";
+    values.push_back(std::move(property));
+  }
+}
+
+void NDFPropertyList::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  auto list_node = node.append_child("List").append_child("List");
+  for(auto const& value : values) {
+    auto value_node = list_node.append_child("items");
+    value_node.append_attribute("typeId").set_value(value->property_type);
+    value->to_ndfbin_xml(root, value_node);
+  }
+}
+
+void NDFPropertyMap::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  for(auto const& map_node : node.child("Map").child("Map").child("mapitems").children()) {
+    auto const &key_node = map_node.child("key");
+    size_t key_type = key_node.attribute("typeId").as_uint();
+    auto key_property = get_property_from_ndfbin_xml(key_type, key_node);
+    key_property->property_name = "Key";
+    key_property->from_ndfbin_xml(root, key_node);
+
+    auto const &value_node = map_node.child("value");
+    size_t value_type = value_node.attribute("typeId").as_uint();
+    auto value_property = get_property_from_ndfbin_xml(value_type, value_node);
+    value_property->property_name = "Value";
+    value_property->from_ndfbin_xml(root, value_node);
+
+    values.push_back(std::make_pair(std::move(key_property), std::move(value_property)));
+  }
+}
+
+void NDFPropertyMap::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  auto map_node = node.append_child("Map").append_child("Map").append_child("mapitems");
+  for(auto const& [key, value] : values) {
+    auto key_node = map_node.append_child("key");
+    key_node.append_attribute("typeId").set_value(key->property_type);
+    key->to_ndfbin_xml(root, key_node);
+    auto value_node = map_node.append_child("value");
+    value_node.append_attribute("typeId").set_value(value->property_type);
+    value->to_ndfbin_xml(root, value_node);
+  }
+}
+
+void NDFPropertyS16::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("S16").child("S16").attribute("value").as_int();
+  spdlog::debug("S16: {}", value);
+}
+
+void NDFPropertyS16::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("S16").append_child("S16").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyU16::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  value = node.child("U16").child("U16").attribute("value").as_uint();
+  spdlog::debug("U16: {}", value);
+}
+
+void NDFPropertyU16::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("U16").append_child("U16").append_attribute("value").set_value(value);
+}
+
+void NDFPropertyGUID::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  guid = node.child("GUID").child("GUID").attribute("data").as_string();
+  spdlog::debug("GUID: {}", guid);
+}
+
+void NDFPropertyGUID::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("GUID").append_child("GUID").append_attribute("data").set_value(guid.c_str());
+}
+
+void NDFPropertyPathReference::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  size_t string_idx = node.child("PathReference").child("PathReference").attribute("stringIndex").as_uint();
+  path = root->string_table[string_idx];
+  spdlog::debug("Path Reference: {}", path);
+}
+
+void NDFPropertyPathReference::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("PathReference").append_child("PathReference").append_attribute("stringIndex").set_value(path.c_str());
+}
+
+void NDFPropertyLocalisationHash::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  hash = node.child("LocalisationHash").child("LocalisationHash").attribute("data").as_string();
+  spdlog::debug("Localisation Hash: {}", hash);
+}
+
+void NDFPropertyLocalisationHash::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("LocalisationHash").append_child("LocalisationHash").append_attribute("data").set_value(hash.c_str());
+}
+
+void NDFPropertyS32_vec2::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  x = node.child("S32_vec2").child("S32_vec2").attribute("x").as_int();
+  y = node.child("S32_vec2").child("S32_vec2").attribute("y").as_int();
+  spdlog::debug("Vector2: ({}, {})", x, y);
+}
+
+void NDFPropertyS32_vec2::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto vec2_node = node.append_child("S32_vec2").append_child("S32_vec2");
+  vec2_node.append_attribute("x").set_value(x);
+  vec2_node.append_attribute("y").set_value(y);
+}
+
+void NDFPropertyF32_vec2::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  x = node.child("F32_vec2").child("F32_vec2").attribute("x").as_float();
+  y = node.child("F32_vec2").child("F32_vec2").attribute("y").as_float();
+  spdlog::debug("Vector2: ({}, {})", x, y);
+}
+
+void NDFPropertyF32_vec2::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  auto vec2_node = node.append_child("F32_vec2").append_child("F32_vec2");
+  vec2_node.append_attribute("x").set_value(x);
+  vec2_node.append_attribute("y").set_value(y);
+}
+
+void NDFPropertyPair::from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) {
+  auto const &first_node = node.child("Pair").child("Pair").child("first");
+  size_t first_type = first_node.attribute("typeId").as_uint();
+  first = get_property_from_ndfbin_xml(first_type, first_node);
+  first->from_ndfbin_xml(root, first_node);
+  first->property_name = "First";
+
+  auto const &second_node = node.child("Pair").child("Pair").child("second");
+  size_t second_type = second_node.attribute("typeId").as_uint();
+  second = get_property_from_ndfbin_xml(second_type, second_node);
+  second->from_ndfbin_xml(root, second_node);
+  second->property_name = "Second";
+}
+
+void NDFPropertyPair::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
+  auto pair_node = node.append_child("Pair").append_child("Pair");
+  auto first_node = pair_node.append_child("first");
+  first_node.append_attribute("typeId").set_value(first->property_type);
+  first->to_ndfbin_xml(root, first_node);
+  auto second_node = pair_node.append_child("second");
+  second_node.append_attribute("typeId").set_value(second->property_type);
+  second->to_ndfbin_xml(root, second_node);
+}
+
