@@ -13,6 +13,12 @@ set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 add_subdirectory(deps/etceterapp)
 
+find_package(argparse REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
+find_package(Catch2 REQUIRED)
+find_package(pugixml REQUIRED)
+
 # add version information
 find_package(Git)
 if (GIT_FOUND)
@@ -28,6 +34,7 @@ else ()
 endif ()
 
 add_library(ndf src/ndf.cpp src/ndf_bin.cpp)
+target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml)
 target_include_directories(ndf PUBLIC .)
 
 add_executable(ndfbin src/ndfbin.cpp)
@@ -51,4 +58,4 @@ target_link_libraries(ndf_helper PRIVATE ndf etceterapp)
 add_executable(ndfbin_helper
         src/ndfbin_helper.cpp
 )
-target_link_libraries(ndfbin_helper PRIVATE ndf etceterapp)
+target_link_libraries(ndfbin_helper PRIVATE ndf)
