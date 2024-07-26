@@ -1,3 +1,6 @@
 [submodule "deps/etceterapp"]
 	path = deps/etceterapp
 	url = https://github.com/ev1313/etceterapp.git
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/microsoft/vcpkg
