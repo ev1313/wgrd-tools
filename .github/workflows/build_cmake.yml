@@ -45,5 +45,5 @@ jobs:
           cmake --build build/ -j8
       - uses: actions/upload-artifact@v3
         with:
-          name: build
-          path: build/
+          name: ndfbin_helper.exe
+          path: build/Debug/ndfbin_helper.exe
