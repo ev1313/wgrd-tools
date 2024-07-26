@@ -161,7 +161,7 @@ void NDFPropertyPair::to_ndfbin(NDF* root, std::ostream& stream) {
   second->to_ndfbin(root, stream);
 }
 
-struct NDFBinHeader {
+PACK(struct NDFBinHeader {
   char magic[4] = {'E', 'U', 'G', '0'};
   char magic2[4] = {0,0,0,0};
   char magic3[4] = {'C', 'N', 'D', 'F'};
@@ -172,18 +172,18 @@ struct NDFBinHeader {
   char unk2[4] = {0,0,0,0};
   uint32_t size = 0;
   char unk4[4] = {0,0,0,0};
-} __attribute__((packed));
+});
 
-struct TOCTableEntry {
+PACK(struct TOCTableEntry {
   char magic[4];
   char pad0[4] = {0,0,0,0};
   uint32_t offset;
   char pad1[4] = {0,0,0,0};
   uint32_t size;
   char pad2[4] = {0,0,0,0};
-} __attribute__((packed));
+});
 
-struct TOCTable {
+PACK(struct TOCTable {
   char magic[4] = {'T', 'O', 'C', '0'};
   uint32_t count = 9;
   TOCTableEntry OBJE;
@@ -195,19 +195,19 @@ struct TOCTable {
   TOCTableEntry TRAN;
   TOCTableEntry IMPR;
   TOCTableEntry EXPR;
-} __attribute__((packed));
+});
 
-struct NDF_Object {
+PACK(struct NDF_Object {
   uint32_t classIndex;
-} __attribute__((packed));
+});
 
-struct NDF_Property {
+PACK(struct NDF_Property {
   uint32_t propertyIndex;
-} __attribute__((packed));
+});
 
-struct NDF_Type {
+PACK(struct NDF_Type {
   uint32_t typeIndex;
-} __attribute__((packed));
+});
 
 void NDF::load_from_ndfbin(fs::path path) {
   std::ifstream file(path, std::ios::binary);
