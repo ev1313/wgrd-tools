@@ -11,7 +11,7 @@ set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-add_subdirectory(deps/etceterapp)
+#add_subdirectory(deps/etceterapp)
 
 add_subdirectory(deps/argparse)
 add_subdirectory(deps/spdlog)
@@ -36,26 +36,26 @@ endif ()
 add_library(ndf src/ndf.cpp src/ndf_bin.cpp)
 target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml)
 target_include_directories(ndf PUBLIC .)
-
-add_executable(ndfbin src/ndfbin.cpp)
-target_link_libraries(ndfbin PRIVATE etceterapp)
-
-add_executable(edat
-        src/edat.cpp
-)
-target_link_libraries(edat PRIVATE etceterapp)
-
-add_executable(edat_helper
-        src/edat_helper.cpp
-)
-target_link_libraries(edat_helper PRIVATE etceterapp)
-
 add_executable(ndf_helper
         src/ndf_helper.cpp
 )
-target_link_libraries(ndf_helper PRIVATE ndf etceterapp)
+target_link_libraries(ndf_helper PRIVATE ndf)
 
 add_executable(ndfbin_helper
         src/ndfbin_helper.cpp
 )
 target_link_libraries(ndfbin_helper PRIVATE ndf)
+
+#add_executable(ndfbin src/ndfbin.cpp)
+#target_link_libraries(ndfbin PRIVATE etceterapp)
+#
+#add_executable(edat
+#        src/edat.cpp
+#)
+#target_link_libraries(edat PRIVATE etceterapp)
+#
+#add_executable(edat_helper
+#        src/edat_helper.cpp
+#)
+#target_link_libraries(edat_helper PRIVATE etceterapp)
+
