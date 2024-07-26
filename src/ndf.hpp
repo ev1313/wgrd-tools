@@ -15,14 +15,6 @@ namespace fs = std::filesystem;
 
 using namespace std::literals;
 
-#ifdef __GNUC__
-#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
-#endif
-
 struct NDF;
 
 struct NDFClass {
@@ -76,9 +68,11 @@ struct NDFPropertyBool : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Bool {
+  #pragma pack(push, 1)
+  struct NDF_Bool {
     uint8_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Bool ndf_bool;
@@ -110,9 +104,11 @@ struct NDFPropertyInt8 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Int8 {
+  #pragma pack(push, 1)
+  struct NDF_Int8 {
     uint8_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Int8 ndf_int8;
@@ -144,9 +140,11 @@ struct NDFPropertyInt32 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Int32 {
+  #pragma pack(push, 1)
+  struct NDF_Int32 {
     int32_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Int32 ndf_int32;
@@ -178,9 +176,11 @@ struct NDFPropertyUInt32 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_UInt32 {
+  #pragma pack(push, 1)
+  struct NDF_UInt32 {
     uint32_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_UInt32 ndf_uint32;
@@ -212,9 +212,11 @@ struct NDFPropertyFloat32 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Float32 {
+  #pragma pack(push, 1)
+  struct NDF_Float32 {
     float value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Float32 ndf_float32;
@@ -246,9 +248,11 @@ struct NDFPropertyFloat64 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Float64 {
+  #pragma pack(push, 1)
+  struct NDF_Float64 {
     double value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Float64 ndf_float64;
@@ -280,9 +284,11 @@ struct NDFPropertyString : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_String {
+  #pragma pack(push, 1)
+  struct NDF_String {
     uint32_t string_index;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
@@ -306,9 +312,11 @@ struct NDFPropertyWideString : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_WideString {
+  #pragma pack(push, 1)
+  struct NDF_WideString {
     uint32_t length;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
@@ -338,11 +346,13 @@ struct NDFPropertyF32_vec3 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_F32_vec3 {
+  #pragma pack(push, 1)
+  struct NDF_F32_vec3 {
     float x;
     float y;
     float z;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_F32_vec3 ndf_f32_vec3;
@@ -387,12 +397,14 @@ struct NDFPropertyF32_vec4 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_F32_vec4 {
+  #pragma pack(push, 1)
+  struct NDF_F32_vec4 {
     float x;
     float y;
     float z;
     float w;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_F32_vec4 ndf_f32_vec4;
@@ -439,12 +451,14 @@ struct NDFPropertyColor : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_Color {
+  #pragma pack(push, 1)
+  struct NDF_Color {
     uint8_t r;
     uint8_t g;
     uint8_t b;
     uint8_t a;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_Color ndf_color;
@@ -488,11 +502,13 @@ struct NDFPropertyS32_vec3 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_S32_vec3 {
+  #pragma pack(push, 1)
+  struct NDF_S32_vec3 {
     int32_t x;
     int32_t y;
     int32_t z;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_S32_vec3 ndf_s32_vec3;
@@ -535,10 +551,12 @@ struct NDFPropertyObjectReference : NDFProperty {
     assert(node.attribute("referenceType").as_uint() == ReferenceType::Object);
   }
 private:
-  PACK(struct NDF_ObjectReference {
+  #pragma pack(push, 1)
+  struct NDF_ObjectReference {
     uint32_t object_index;
     uint32_t class_index;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
@@ -564,9 +582,11 @@ struct NDFPropertyImportReference : NDFProperty {
     assert(node.attribute("referenceType").as_uint() == ReferenceType::Import);
   }
 private:
-  PACK(struct NDF_ImportReference {
+  #pragma pack(push, 1)
+  struct NDF_ImportReference {
     uint32_t import_index;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
@@ -594,9 +614,11 @@ struct NDFPropertyList : NDFProperty {
     }
   }
 private:
-  PACK(struct NDF_List {
+  #pragma pack(push, 1)
+  struct NDF_List {
     uint32_t count;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
@@ -634,9 +656,11 @@ struct NDFPropertyMap : NDFProperty {
     }
   }
 private:
-  PACK(struct NDF_Map {
+  #pragma pack(push, 1)
+  struct NDF_Map {
     uint32_t count;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
@@ -660,9 +684,11 @@ struct NDFPropertyS16 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_S16 {
+  #pragma pack(push, 1)
+  struct NDF_S16 {
     int16_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_S16 ndf_s16;
@@ -694,9 +720,11 @@ struct NDFPropertyU16 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_U16 {
+  #pragma pack(push, 1)
+  struct NDF_U16 {
     uint16_t value;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_U16 ndf_u16;
@@ -729,9 +757,11 @@ struct NDFPropertyGUID : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_GUID {
+  #pragma pack(push, 1)
+  struct NDF_GUID {
     uint8_t guid[16];
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_GUID ndf_guid;
@@ -768,9 +798,11 @@ struct NDFPropertyPathReference : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_PathReference {
+  #pragma pack(push, 1)
+  struct NDF_PathReference {
     uint32_t path_index;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
@@ -795,9 +827,11 @@ struct NDFPropertyLocalisationHash : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_LocalisationHash {
+  #pragma pack(push, 1)
+  struct NDF_LocalisationHash {
     uint8_t hash[8];
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_LocalisationHash ndf_hash;
@@ -837,10 +871,12 @@ struct NDFPropertyS32_vec2 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_S32_vec2 {
+  #pragma pack(push, 1)
+  struct NDF_S32_vec2 {
     int32_t x;
     int32_t y;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_S32_vec2 ndf_s32_vec2;
@@ -877,10 +913,12 @@ struct NDFPropertyF32_vec2 : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
   }
 private:
-  PACK(struct NDF_F32_vec2 {
+  #pragma pack(push, 1)
+  struct NDF_F32_vec2 {
     float x;
     float y;
-  });
+  };
+  #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
     NDF_F32_vec2 ndf_f32_vec2;
