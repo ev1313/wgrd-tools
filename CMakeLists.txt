@@ -37,7 +37,7 @@ else ()
 endif ()
 
 add_library(ndf src/ndf.cpp src/ndf_bin.cpp)
-target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml)
+target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml fmt::fmt)
 target_include_directories(ndf PUBLIC .)
 add_executable(ndf_helper
         src/ndf_helper.cpp

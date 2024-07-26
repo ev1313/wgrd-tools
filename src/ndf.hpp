@@ -5,7 +5,6 @@
 #include <map>
 #include <set>
 #include <ranges>
-#include <format>
 
 #include "spdlog/spdlog.h"
 
