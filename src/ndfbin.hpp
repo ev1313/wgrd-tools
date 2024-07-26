@@ -10,6 +10,7 @@
 #include "string.hpp"
 #include "struct.hpp"
 
+#include <cpptrace/cpptrace.hpp>
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -627,7 +628,21 @@ inline std::shared_ptr<Struct> get_ndfbin() {
       Field("magic2", BytesConst::create("\x00\x00\x00\x00"s)),
       Field("magic3", BytesConst::create("CNDF"s)),
       Field("compressed", Int32ul::create()),
-      Field("toc0offset", Int32ul::create()),
+      Field("toc0offset", Rebuild::create(
+          [](std::weak_ptr<Base> c) {
+            size_t data_size = 0;
+            data_size += lock(c)->get<uint32_t>("toc0header", "OBJE", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "TOPO", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "CHNK", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "CLAS", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "PROP", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "STRG", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "TRAN", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "IMPR", "size");
+            data_size += lock(c)->get<uint32_t>("toc0header", "EXPR", "size");
+            return std::make_any<uint32_t>(40 + data_size);
+          },
+          Int32ul::create())),
       Field("unk0", BytesConst::create("\x00\x00\x00\x00"s)),
       Field("headerSize", Rebuild::create(
           [](std::weak_ptr<Base>) {

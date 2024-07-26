@@ -18,16 +18,18 @@ using namespace std::literals;
 struct NDF;
 
 struct NDFClass {
-  std::map<std::string, size_t> properties;
+  std::map<std::string, uint32_t> properties;
 };
 
 struct NDFProperty {
-  size_t property_idx;
-  size_t property_type;
+  uint32_t property_idx;
+  uint32_t property_type;
   std::string property_name;
   virtual ~NDFProperty() = default;
-  static std::unique_ptr<NDFProperty> get_property_from_ndfbin_xml(size_t ndf_type, const pugi::xml_node& ndf_node);
-  static std::unique_ptr<NDFProperty> get_property_from_ndf_xml(size_t ndf_type, const pugi::xml_node& ndf_node);
+  static std::unique_ptr<NDFProperty> get_property_from_ndftype(uint32_t ndf_type);
+  static std::unique_ptr<NDFProperty> get_property_from_ndfbin_xml(uint32_t ndf_type, const pugi::xml_node& ndf_node);
+  static std::unique_ptr<NDFProperty> get_property_from_ndf_xml(uint32_t ndf_type, const pugi::xml_node& ndf_node);
+  static std::unique_ptr<NDFProperty> get_property_from_ndfbin(uint32_t ndf_type, std::istream& stream);
   virtual void from_ndfbin_xml(const NDF*, const pugi::xml_node&) {
     throw std::runtime_error("Not implemented");
   }
@@ -38,6 +40,12 @@ struct NDFProperty {
     throw std::runtime_error("Not implemented");
   }
   virtual void from_ndf_xml(const pugi::xml_node&) {
+    throw std::runtime_error("Not implemented");
+  }
+  virtual void from_ndfbin(NDF*, std::istream&) {
+    throw std::runtime_error("Not implemented");
+  }
+  virtual void to_ndfbin(NDF*, std::ostream&) {
     throw std::runtime_error("Not implemented");
   }
 };
@@ -59,10 +67,25 @@ struct NDFPropertyBool : NDFProperty {
     value = node.attribute("value").as_bool();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_Bool {
+    uint8_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Bool ndf_bool;
+    stream.read(reinterpret_cast<char*>(&ndf_bool), sizeof(NDF_Bool));
+    value = ndf_bool.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Bool ndf_bool;
+    ndf_bool.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_bool), sizeof(NDF_Bool));
+  }
 };
 
 struct NDFPropertyInt8 : NDFProperty {
-  int8_t value;
+  uint8_t value;
   NDFPropertyInt8() {
     property_type = 0x1;
   }
@@ -77,6 +100,21 @@ struct NDFPropertyInt8 : NDFProperty {
     property_name = node.name();
     value = node.attribute("value").as_int();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_Int8 {
+    uint8_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Int8 ndf_int8;
+    stream.read(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_Int8));
+    value = ndf_int8.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Int8 ndf_int8;
+    ndf_int8.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_Int8));
   }
 };
 
@@ -97,6 +135,21 @@ struct NDFPropertyInt32 : NDFProperty {
     value = node.attribute("value").as_int();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_Int32 {
+    int32_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Int32 ndf_int32;
+    stream.read(reinterpret_cast<char*>(&ndf_int32), sizeof(NDF_Int32));
+    value = ndf_int32.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Int32 ndf_int32;
+    ndf_int32.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_int32), sizeof(NDF_Int32));
+  }
 };
 
 struct NDFPropertyUInt32 : NDFProperty {
@@ -115,6 +168,21 @@ struct NDFPropertyUInt32 : NDFProperty {
     property_name = node.name();
     value = node.attribute("value").as_uint();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_UInt32 {
+    uint32_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_UInt32 ndf_uint32;
+    stream.read(reinterpret_cast<char*>(&ndf_uint32), sizeof(NDF_UInt32));
+    value = ndf_uint32.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_UInt32 ndf_uint32;
+    ndf_uint32.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_uint32), sizeof(NDF_UInt32));
   }
 };
 
@@ -135,6 +203,21 @@ struct NDFPropertyFloat32 : NDFProperty {
     value = node.attribute("value").as_float();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_Float32 {
+    float value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Float32 ndf_float32;
+    stream.read(reinterpret_cast<char*>(&ndf_float32), sizeof(NDF_Float32));
+    value = ndf_float32.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Float32 ndf_float32;
+    ndf_float32.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_float32), sizeof(NDF_Float32));
+  }
 };
 
 struct NDFPropertyFloat64 : NDFProperty {
@@ -153,6 +236,21 @@ struct NDFPropertyFloat64 : NDFProperty {
     property_name = node.name();
     value = node.attribute("value").as_double();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_Float64 {
+    double value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Float64 ndf_float64;
+    stream.read(reinterpret_cast<char*>(&ndf_float64), sizeof(NDF_Float64));
+    value = ndf_float64.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Float64 ndf_float64;
+    ndf_float64.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_float64), sizeof(NDF_Float64));
   }
 };
 
@@ -173,6 +271,13 @@ struct NDFPropertyString : NDFProperty {
     value = node.attribute("value").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_String {
+    uint32_t string_index;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF* root, std::istream& stream) override;
+  void to_ndfbin(NDF* root, std::ostream& stream) override;
 };
 
 struct NDFPropertyWideString : NDFProperty {
@@ -192,6 +297,13 @@ struct NDFPropertyWideString : NDFProperty {
     value = node.attribute("str").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_WideString {
+    uint32_t length;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF* root, std::istream& stream) override;
+  void to_ndfbin(NDF* root, std::ostream& stream) override;
 };
 
 struct NDFPropertyF32_vec3 : NDFProperty {
@@ -216,6 +328,27 @@ struct NDFPropertyF32_vec3 : NDFProperty {
     y = node.attribute("y").as_float();
     z = node.attribute("z").as_float();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_F32_vec3 {
+    float x;
+    float y;
+    float z;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_F32_vec3 ndf_f32_vec3;
+    stream.read(reinterpret_cast<char*>(&ndf_f32_vec3), sizeof(NDF_F32_vec3));
+    x = ndf_f32_vec3.x;
+    y = ndf_f32_vec3.y;
+    z = ndf_f32_vec3.z;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_F32_vec3 ndf_f32_vec3;
+    ndf_f32_vec3.x = x;
+    ndf_f32_vec3.y = y;
+    ndf_f32_vec3.z = z;
+    stream.write(reinterpret_cast<char*>(&ndf_f32_vec3), sizeof(NDF_F32_vec3));
   }
 };
 
@@ -245,6 +378,30 @@ struct NDFPropertyF32_vec4 : NDFProperty {
     w = node.attribute("w").as_float();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_F32_vec4 {
+    float x;
+    float y;
+    float z;
+    float w;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_F32_vec4 ndf_f32_vec4;
+    stream.read(reinterpret_cast<char*>(&ndf_f32_vec4), sizeof(NDF_F32_vec4));
+    x = ndf_f32_vec4.x;
+    y = ndf_f32_vec4.y;
+    z = ndf_f32_vec4.z;
+    w = ndf_f32_vec4.w;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_F32_vec4 ndf_f32_vec4;
+    ndf_f32_vec4.x = x;
+    ndf_f32_vec4.y = y;
+    ndf_f32_vec4.z = z;
+    ndf_f32_vec4.w = w;
+    stream.write(reinterpret_cast<char*>(&ndf_f32_vec4), sizeof(NDF_F32_vec4));
+  }
 };
 
 struct NDFPropertyColor : NDFProperty {
@@ -273,6 +430,30 @@ struct NDFPropertyColor : NDFProperty {
     a = node.attribute("a").as_uint();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_Color {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Color ndf_color;
+    stream.read(reinterpret_cast<char*>(&ndf_color), sizeof(NDF_Color));
+    r = ndf_color.r;
+    g = ndf_color.g;
+    b = ndf_color.b;
+    a = ndf_color.a;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Color ndf_color;
+    ndf_color.r = r;
+    ndf_color.g = g;
+    ndf_color.b = b;
+    ndf_color.a = a;
+    stream.write(reinterpret_cast<char*>(&ndf_color), sizeof(NDF_Color));
+  }
 };
 
 struct NDFPropertyS32_vec3 : NDFProperty {
@@ -297,6 +478,27 @@ struct NDFPropertyS32_vec3 : NDFProperty {
     y = node.attribute("y").as_int();
     z = node.attribute("z").as_int();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_S32_vec3 {
+    int32_t x;
+    int32_t y;
+    int32_t z;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_S32_vec3 ndf_s32_vec3;
+    stream.read(reinterpret_cast<char*>(&ndf_s32_vec3), sizeof(NDF_S32_vec3));
+    x = ndf_s32_vec3.x;
+    y = ndf_s32_vec3.y;
+    z = ndf_s32_vec3.z;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_S32_vec3 ndf_s32_vec3;
+    ndf_s32_vec3.x = x;
+    ndf_s32_vec3.y = y;
+    ndf_s32_vec3.z = z;
+    stream.write(reinterpret_cast<char*>(&ndf_s32_vec3), sizeof(NDF_S32_vec3));
   }
 };
 
@@ -324,6 +526,14 @@ struct NDFPropertyObjectReference : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
     assert(node.attribute("referenceType").as_uint() == ReferenceType::Object);
   }
+private:
+  struct NDF_ObjectReference {
+    uint32_t object_index;
+    uint32_t class_index;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF* root, std::istream& stream) override;
+  void to_ndfbin(NDF* root, std::ostream& stream) override;
 };
 
 struct NDFPropertyImportReference : NDFProperty {
@@ -345,6 +555,13 @@ struct NDFPropertyImportReference : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
     assert(node.attribute("referenceType").as_uint() == ReferenceType::Import);
   }
+private:
+  struct NDF_ImportReference {
+    uint32_t import_index;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF* root, std::istream& stream) override;
+  void to_ndfbin(NDF* root, std::ostream& stream) override;
 };
 
 struct NDFPropertyList : NDFProperty {
@@ -368,6 +585,13 @@ struct NDFPropertyList : NDFProperty {
       values.back()->from_ndf_xml(value_node);
     }
   }
+private:
+  struct NDF_List {
+    uint32_t count;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream&) override;
+  void to_ndfbin(NDF*, std::ostream&) override;
 };
 
 struct NDFPropertyMap : NDFProperty {
@@ -401,6 +625,13 @@ struct NDFPropertyMap : NDFProperty {
       values.push_back({std::move(key), std::move(value)});
     }
   }
+private:
+  struct NDF_Map {
+    uint32_t count;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream&) override;
+  void to_ndfbin(NDF*, std::ostream&) override;
 };
 
 struct NDFPropertyS16 : NDFProperty {
@@ -420,6 +651,21 @@ struct NDFPropertyS16 : NDFProperty {
     value = node.attribute("value").as_int();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_S16 {
+    int16_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_S16 ndf_s16;
+    stream.read(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_S16));
+    value = ndf_s16.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_S16 ndf_s16;
+    ndf_s16.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_S16));
+  }
 };
 
 struct NDFPropertyU16 : NDFProperty {
@@ -438,6 +684,21 @@ struct NDFPropertyU16 : NDFProperty {
     property_name = node.name();
     value = node.attribute("value").as_uint();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_U16 {
+    uint16_t value;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_U16 ndf_u16;
+    stream.read(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_U16));
+    value = ndf_u16.value;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_U16 ndf_u16;
+    ndf_u16.value = value;
+    stream.write(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_U16));
   }
 };
 
@@ -459,6 +720,26 @@ struct NDFPropertyGUID : NDFProperty {
     guid = node.attribute("guid").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_GUID {
+    uint8_t guid[16];
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_GUID ndf_guid;
+    stream.read(reinterpret_cast<char*>(&ndf_guid), sizeof(NDF_GUID));
+    guid = "";
+    for(auto const &byte : ndf_guid.guid) {
+      guid += std::format("{:02X}", byte);
+    }
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_GUID ndf_guid;
+    for(uint32_t i = 0; i < 16; i++) {
+      std::from_chars(guid.c_str() + i * 2, guid.c_str() + i * 2 + 2, ndf_guid.guid[i], 16);
+    }
+    stream.write(reinterpret_cast<char*>(&ndf_guid), sizeof(NDF_GUID));
+  }
 };
 
 struct NDFPropertyPathReference : NDFProperty {
@@ -478,6 +759,13 @@ struct NDFPropertyPathReference : NDFProperty {
     path = node.attribute("path").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_PathReference {
+    uint32_t path_index;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream&) override;
+  void to_ndfbin(NDF*, std::ostream&) override;
 };
 
 // FIXME: error checking for hashes?
@@ -497,6 +785,26 @@ struct NDFPropertyLocalisationHash : NDFProperty {
     property_name = node.name();
     hash = node.attribute("hash").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_LocalisationHash {
+    uint8_t hash[8];
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_LocalisationHash ndf_hash;
+    stream.read(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_LocalisationHash));
+    hash = "";
+    for(auto const &byte : ndf_hash.hash) {
+      hash += std::format("{:02X}", byte);
+    }
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_LocalisationHash ndf_hash;
+    for(uint32_t i = 0; i < 8; i++) {
+      std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2, ndf_hash.hash[i], 16);
+    }
+    stream.write(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_LocalisationHash));
   }
 };
 
@@ -520,6 +828,24 @@ struct NDFPropertyS32_vec2 : NDFProperty {
     y = node.attribute("y").as_int();
     assert(node.attribute("typeId").as_uint() == property_type);
   }
+private:
+  struct NDF_S32_vec2 {
+    int32_t x;
+    int32_t y;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_S32_vec2 ndf_s32_vec2;
+    stream.read(reinterpret_cast<char*>(&ndf_s32_vec2), sizeof(NDF_S32_vec2));
+    x = ndf_s32_vec2.x;
+    y = ndf_s32_vec2.y;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_S32_vec2 ndf_s32_vec2;
+    ndf_s32_vec2.x = x;
+    ndf_s32_vec2.y = y;
+    stream.write(reinterpret_cast<char*>(&ndf_s32_vec2), sizeof(NDF_S32_vec2));
+  }
 };
 
 struct NDFPropertyF32_vec2 : NDFProperty {
@@ -541,6 +867,24 @@ struct NDFPropertyF32_vec2 : NDFProperty {
     x = node.attribute("x").as_float();
     y = node.attribute("y").as_float();
     assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  struct NDF_F32_vec2 {
+    float x;
+    float y;
+  } __attribute__((packed));
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_F32_vec2 ndf_f32_vec2;
+    stream.read(reinterpret_cast<char*>(&ndf_f32_vec2), sizeof(NDF_F32_vec2));
+    x = ndf_f32_vec2.x;
+    y = ndf_f32_vec2.y;
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_F32_vec2 ndf_f32_vec2;
+    ndf_f32_vec2.x = x;
+    ndf_f32_vec2.y = y;
+    stream.write(reinterpret_cast<char*>(&ndf_f32_vec2), sizeof(NDF_F32_vec2));
   }
 };
 
@@ -570,6 +914,9 @@ struct NDFPropertyPair : NDFProperty {
     second = get_property_from_ndf_xml(second_node.attribute("typeId").as_uint(), second_node);
     second->from_ndf_xml(second_node);
   }
+public:
+  void from_ndfbin(NDF*, std::istream&) override;
+  void to_ndfbin(NDF*, std::ostream&) override;
 };
 
 struct NDFObject {
@@ -583,11 +930,11 @@ struct NDFObject {
 struct NDF {
 private:
   void iterate_imprs(const pugi::xml_node& root, const pugi::xml_node& impr_node, std::vector<std::string> current_import_path) {
-    size_t tran_idx = impr_node.attribute("tranIndex").as_uint();
+    uint32_t tran_idx = impr_node.attribute("tranIndex").as_uint();
     auto tran_iterator = root.child("TRAN").children().begin();
     std::advance(tran_iterator, tran_idx);
 
-    size_t object_idx = impr_node.attribute("index").as_uint();
+    uint32_t object_idx = impr_node.attribute("index").as_uint();
 
     for(auto const & impr_child_node : impr_node.children()) {
       current_import_path.push_back(tran_iterator->attribute("str").as_string());
@@ -604,11 +951,11 @@ private:
   }
 
   void iterate_exprs(const pugi::xml_node& root, const pugi::xml_node& expr_node, std::vector<std::string> current_export_path) {
-    size_t tran_idx = expr_node.attribute("tranIndex").as_uint();
+    uint32_t tran_idx = expr_node.attribute("tranIndex").as_uint();
     auto tran_iterator = root.child("TRAN").children().begin();
     std::advance(tran_iterator, tran_idx);
     
-    size_t object_idx = expr_node.attribute("index").as_uint();
+    uint32_t object_idx = expr_node.attribute("index").as_uint();
 
     for(auto const & expr_child_node : expr_node.children()) {
       current_export_path.push_back(tran_iterator->attribute("str").as_string());
@@ -627,69 +974,13 @@ private:
 public:
   std::map<unsigned int, std::string> import_name_table;
   std::vector<std::string> string_table;
+  // FIXME: load_from_ndfbin_xml should also use this table
+  std::vector<std::string> class_table;
+  std::vector<std::pair<std::string, uint32_t>> property_table;
+  std::vector<std::string> tran_table;
   std::vector<NDFObject> objects;
 
-  void load_from_ndfbin_xml(fs::path path) {
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file(path.c_str());
-    spdlog::debug("Load result: {}", result.description());
-    assert(result.status == pugi::status_ok);
-
-    auto root = doc.child("root").child("NdfBin").child("toc0header");
-    assert(root);
-
-    for (auto const impr_node : root.child("IMPR").children()) {
-      iterate_imprs(root, impr_node, {});
-    }
-
-    for(auto const string_node : root.child("STRG").children()) {
-      string_table.push_back(string_node.attribute("str").as_string());
-    }
-
-    for (auto const [object_idx, object_node] : std::views::enumerate(root.child("OBJE").children())) {
-      NDFObject object;
-      object.name = std::format("Object_{}", object_idx);
-
-      size_t class_idx = object_node.attribute("classIndex").as_uint();
-      auto class_iterator = root.child("CLAS").children().begin();
-      std::advance(class_iterator, class_idx);
-      object.class_name = class_iterator->attribute("str").as_string();
-
-      for(auto const prop_node : object_node.children()) {
-        size_t property_idx = prop_node.attribute("propertyIndex").as_uint();
-
-        if(property_idx == 2880154539) {
-          continue;
-        }
-
-        spdlog::debug("Property Index: {}", property_idx);
-        auto property_iterator = root.child("PROP").children().begin();
-        std::advance(property_iterator, property_idx);
-
-        auto ndf_node = prop_node.child("NDFType");
-        size_t ndf_type = ndf_node.attribute("typeId").as_uint();
-
-        std::unique_ptr<NDFProperty> property = NDFProperty::get_property_from_ndfbin_xml(ndf_type, ndf_node);
-        property->from_ndfbin_xml(this, ndf_node);
-
-        property->property_name = property_iterator->attribute("str").as_string();
-
-        object.properties.push_back(std::move(property));
-      }
-
-      objects.push_back(std::move(object));
-    }
-
-    for(auto const &topo_node : root.child("TOPO").children()) {
-      size_t object_idx = topo_node.attribute("objectIndex").as_uint();
-      auto object_iterator = objects.begin();
-      std::advance(object_iterator, object_idx);
-      object_iterator->is_top_object = true;
-    }
-
-    std::vector<std::string> current_export_path;
-    iterate_exprs(root, root.child("EXPR").child("Export"), current_export_path);
-  }
+  void load_from_ndfbin_xml(fs::path path);
 
   void save_as_ndf_xml(fs::path path) {
     pugi::xml_document doc;
@@ -723,7 +1014,7 @@ public:
       object.is_top_object = obj.attribute("is_top_object").as_bool();
 
       for(const auto &prop : obj.children()) {
-        size_t ndf_type = prop.attribute("typeId").as_uint();
+        uint32_t ndf_type = prop.attribute("typeId").as_uint();
         std::unique_ptr<NDFProperty> property = NDFProperty::get_property_from_ndf_xml(ndf_type, prop);
         property->from_ndf_xml(prop);
         object.properties.push_back(std::move(property));
@@ -732,118 +1023,97 @@ public:
       objects.push_back(std::move(object));
     }
   }
-private:
-  std::map<std::string, size_t> gen_object_table;
 
-  std::vector<std::string> gen_string_items;
-  std::map<std::string, size_t> gen_string_table;
+  void load_imprs(std::istream &stream, std::vector<std::string> current_import_path) {
+    uint32_t tran_index;
+    stream.read(reinterpret_cast<char*>(&tran_index), sizeof(uint32_t));
+    uint32_t index;
+    stream.read(reinterpret_cast<char*>(&index), sizeof(uint32_t));
+    uint32_t count;
+    stream.read(reinterpret_cast<char*>(&count), sizeof(uint32_t));
 
-  std::map<std::string, size_t> gen_clas_items;
-  std::vector<std::string> gen_clas_table;
-  
-  std::map<std::string, size_t> gen_tran_items;
-  std::vector<std::string> gen_tran_table;
+    uint32_t begin_offset = (uint32_t)stream.tellg();
+    if(count > 0) {
+      std::vector<uint32_t> offsets;
+      offsets.resize(count);
+      stream.read(reinterpret_cast<char*>(offsets.data()), sizeof(uint32_t) * count);
 
-  std::map<std::vector<size_t>, size_t> gen_import_table;
-  std::vector<std::vector<size_t>> gen_import_items;
-  std::map<std::vector<size_t>, size_t> gen_export_table;
-  std::vector<std::vector<size_t>> gen_export_items;
-
-  std::vector<NDFClass> gen_property_table;
-
-  void save_imprs(const std::map<std::vector<size_t>, size_t>& gen_table, pugi::xml_node& root_node, const std::string& first_name) {
-    std::vector<size_t> previous_import_path = {};
-    std::vector<pugi::xml_node> previous_import_nodes = {};
-    for(const auto&[k, v] : gen_table) {
-      {
-        std::string key_str = "";
-        for(auto const &foo : k) {
-          key_str += gen_tran_table[foo] + "/";
-        }
-        spdlog::debug("Import: {} -> {}", key_str, v);
+      for(uint32_t offset : offsets) {
+        spdlog::debug("assertion @0x{:02X} is 0x{:02X} should be 0x{:02X}", begin_offset, ((uint32_t)stream.tellg() - begin_offset), offset);
+        assert(offset == ((uint32_t)stream.tellg() - begin_offset));
+        current_import_path.push_back(tran_table[tran_index]);
+        load_imprs(stream, current_import_path);
+        current_import_path.pop_back();
       }
-
-      // first we get the diff to the last run
-      int diff_point = 0;
-      std::vector<size_t> current_path;
-      for(unsigned int x = 0; x < k.size(); x++) {
-        if(x >= previous_import_path.size()) {
-          diff_point = x;
-          spdlog::debug("diff_point size: {} {}", previous_import_path.size(), x);
-          break;
-        }
-        if(previous_import_path[x] != k[x]) {
-          diff_point = x;
-          spdlog::debug("diff_point diff {} {}", previous_import_path[x], k[x]);
-          break;
-        }
-        // we do not add the item that differs
-        current_path.push_back(k[x]);
-      }
-      // now shorten the previous import_path and import xml nodes to the diff point
-    spdlog::debug("diff_point: {}", diff_point);
-        {
-          std::string key_str = "";
-          for(auto const &foo : previous_import_path) {
-            key_str += gen_tran_table[foo] + "/";
-          }
-          spdlog::debug("before shorten prev Import path: {} -> {}", key_str, v);
-        }
-      int diff = previous_import_nodes.size() - diff_point;
-      for(int x = 0; x < diff; x++) {
-        previous_import_path.pop_back();
-        previous_import_nodes.pop_back();
-      }
-        {
-          std::string key_str = "";
-          for(auto const &foo : previous_import_path) {
-            key_str += gen_tran_table[foo] + "/";
-          }
-          spdlog::debug("after shorten prev Import path: {} -> {}", key_str, v);
-        }
-      assert(previous_import_nodes.size() == previous_import_path.size());
-
-      pugi::xml_node current_node = root_node;
-      if(previous_import_nodes.size() > 0) {
-        current_node = previous_import_nodes.back();
-      }
-
-      for(unsigned int x = diff_point; x < k.size(); x++) {
-        // same layer -> add new node
-        std::string name = "imprs";
-        if(x == 0) {
-          name = first_name;
-        }
-        auto impr_node = current_node.append_child(name.c_str());
-
-        // we now update the current_path and search for a possible import
-        current_path.push_back(k[x]);
-
-        impr_node.append_attribute("tranIndex").set_value(k[x]);
-        auto impr_index_it = gen_table.find(current_path); 
-        if(impr_index_it != gen_table.end()) {
-          impr_node.append_attribute("index").set_value(impr_index_it->second);
-        } else {
-          impr_node.append_attribute("index").set_value(4294967295);
-        }
-
-        previous_import_nodes.push_back(impr_node);
-        current_node = impr_node;
-        {
-          std::string key_str = "";
-          for(auto const &foo : current_path) {
-            key_str += gen_tran_table[foo] + "/";
-          }
-          spdlog::debug("current Import path: {} -> {}", key_str, v);
-        }
-      }
-      
-      previous_import_path = current_path;
     }
+
+    if(index == 4294967295) {
+      return;
+    }
+
+    import_name_table[index] = current_import_path | std::views::join_with('/') | std::ranges::to<std::string>();
+    import_name_table[index] += std::string("/") + tran_table[tran_index];
+    spdlog::debug("Import: {}", import_name_table[index]);
   }
 
+  void load_exprs(std::istream &stream, std::vector<std::string> current_export_path) {
+    uint32_t tran_index;
+    stream.read(reinterpret_cast<char*>(&tran_index), sizeof(uint32_t));
+    uint32_t index;
+    stream.read(reinterpret_cast<char*>(&index), sizeof(uint32_t));
+    uint32_t count;
+    stream.read(reinterpret_cast<char*>(&count), sizeof(uint32_t));
+
+    uint32_t begin_offset = (uint32_t)stream.tellg();
+    if(count > 0) {
+      std::vector<uint32_t> offsets;
+      offsets.resize(count);
+      stream.read(reinterpret_cast<char*>(offsets.data()), sizeof(uint32_t) * count);
+
+      for(uint32_t offset : offsets) {
+        assert(offset == ((uint32_t)stream.tellg() - begin_offset));
+        current_export_path.push_back(tran_table[tran_index]);
+        load_exprs(stream, current_export_path);
+        current_export_path.pop_back();
+      }
+    }
+
+    if(index == 4294967295) {
+      return;
+    }
+
+    objects[index].export_path = current_export_path | std::views::join_with('/') | std::ranges::to<std::string>();
+    objects[index].export_path += std::string("/") + tran_table[tran_index];
+    spdlog::debug("Export: {}", objects[index].export_path);
+  }
+
+  void load_from_ndfbin(fs::path path);
+private:
+  std::map<std::string, uint32_t> gen_object_table;
+
+  std::vector<std::string> gen_string_items;
+  std::map<std::string, uint32_t> gen_string_table;
+
+  std::map<std::string, uint32_t> gen_clas_items;
+  std::vector<std::string> gen_clas_table;
+
+  std::vector<uint32_t> gen_topo_table;
+
+  std::map<std::string, uint32_t> gen_tran_items;
+  std::vector<std::string> gen_tran_table;
+
+  std::map<std::vector<uint32_t>, uint32_t> gen_import_table;
+  std::vector<std::vector<uint32_t>> gen_import_items;
+  std::map<std::vector<uint32_t>, uint32_t> gen_export_table;
+  std::vector<std::vector<uint32_t>> gen_export_items;
+
+  std::vector<NDFClass> gen_property_table;
+  std::vector<std::pair<std::string, uint32_t>> gen_property_items;
+
+  void save_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, pugi::xml_node& root_node, const std::string& first_name);
+  void save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, std::ostream& stream);
 public:
-  size_t get_object(const std::string& str) {
+  uint32_t get_object(const std::string& str) {
     auto obj_idx = gen_object_table.find(str);
     if(obj_idx == gen_object_table.end()) {
       return 4294967295;
@@ -851,7 +1121,22 @@ public:
     return obj_idx->second;
   }
 
-  size_t get_or_add_string(const std::string& str) {
+  uint32_t get_class(const std::string& str) {
+    auto obj_idx = gen_clas_items.find(str);
+    if(obj_idx == gen_clas_items.end()) {
+      return 4294967295;
+    }
+    return obj_idx->second;
+  }
+
+  uint32_t get_class_of_object(uint32_t object_idx) {
+    if(object_idx == 4294967295) {
+      return 4294967295;
+    }
+    return get_class(objects[object_idx].class_name);
+  }
+
+  uint32_t get_or_add_string(const std::string& str) {
     auto it = gen_string_table.find(str);
     if(it == gen_string_table.end()) {
       gen_string_items.push_back(str);
@@ -862,7 +1147,7 @@ public:
     }
   }
 
-  size_t get_or_add_tran(const std::string& str) {
+  uint32_t get_or_add_tran(const std::string& str) {
     auto it = gen_tran_items.find(str);
     if(it == gen_tran_items.end()) {
       gen_tran_table.push_back(str);
@@ -873,7 +1158,7 @@ public:
     }
   }
 
-  size_t get_or_add_impr_indices(const std::vector<size_t>& vec) {
+  uint32_t get_or_add_impr_indices(const std::vector<uint32_t>& vec) {
     auto it = gen_import_table.find(vec);
     if(it == gen_import_table.end()) {
       gen_import_items.push_back(vec);
@@ -884,8 +1169,8 @@ public:
     }
   }
 
-  size_t get_or_add_impr(std::string impr) {
-    std::vector<size_t> vec;
+  uint32_t get_or_add_impr(std::string impr) {
+    std::vector<uint32_t> vec;
     for(auto str : std::views::split(impr, '/')) {
       std::string foo = std::string(str.begin(), str.end());
       vec.push_back(get_or_add_tran(foo));
@@ -893,7 +1178,7 @@ public:
     return get_or_add_impr_indices(vec);
   }
 
-  size_t get_or_add_expr_indices(const std::vector<size_t>& vec) {
+  uint32_t get_or_add_expr_indices(const std::vector<uint32_t>& vec) {
     auto it = gen_export_table.find(vec);
     if(it == gen_export_table.end()) {
       gen_export_items.push_back(vec);
@@ -904,8 +1189,8 @@ public:
     }
   }
 
-  size_t get_or_add_expr(std::string expr) {
-    std::vector<size_t> vec;
+  uint32_t get_or_add_expr(std::string expr) {
+    std::vector<uint32_t> vec;
     for(auto str : std::views::split(expr, '/')) {
       std::string foo = std::string(str.begin(), str.end());
       vec.push_back(get_or_add_tran(foo));
@@ -913,109 +1198,8 @@ public:
     return get_or_add_expr_indices(vec);
   }
 
-  void save_as_ndfbin_xml(fs::path path) {
-    gen_string_items.clear();
-    gen_string_table.clear();
-    gen_clas_items.clear();
-    gen_clas_table.clear();
-    gen_property_table.clear();
-    gen_object_table.clear();
-
-    pugi::xml_document doc;
-    auto root = doc.append_child("root").append_child("NdfBin").append_child("toc0header");
-
-    auto obje = root.append_child("OBJE");
-
-    for(const auto &[obj_idx, obj] : std::views::enumerate(objects)) {
-      gen_object_table.insert({obj.name, obj_idx});
-    }
-
-    auto topo = root.append_child("TOPO");
-    auto clas = root.append_child("CLAS");
-    
-    // generate chunk
-    auto chnk = root.append_child("CHNK");
-    auto chunk = chnk.append_child("Chunk");
-    chunk.append_attribute("unk0").set_value(0);
-    chunk.append_attribute("objectCount").set_value(objects.size());
-
-    auto prop = root.append_child("PROP");
-    size_t property_idx = 0;
-
-    auto strg = root.append_child("STRG");
-    auto tran = root.append_child("TRAN");
-    auto impr = root.append_child("IMPR");
-    auto expr = root.append_child("EXPR");
-
-    size_t object_idx = 0;
-    for(const auto &obj : objects) {
-      auto obje_node = obje.append_child("Object");
-
-      size_t class_idx;
-      auto clas_it = gen_clas_items.find(obj.class_name);
-      if(clas_it == gen_clas_items.end()) {
-        gen_clas_table.push_back(obj.class_name);
-        gen_clas_items.insert({obj.class_name, gen_clas_table.size() - 1});
-        class_idx = gen_clas_table.size() - 1;
-        gen_property_table.emplace_back();
-        for(auto& property : obj.properties) {
-          // add PROP entry
-          auto prop_node = prop.append_child("Property");
-          prop_node.append_attribute("str").set_value(property->property_name.c_str());
-          prop_node.append_attribute("classIndex").set_value(class_idx);
-
-          gen_property_table[class_idx].properties.insert({property->property_name, property_idx});
-
-          property_idx += 1;
-        }
-      } else {
-        class_idx = clas_it->second;
-      }
-      
-      for(auto& property : obj.properties) {
-        // save property data
-        size_t property_idx = gen_property_table[class_idx].properties[property->property_name];
-        auto prop_node = obje_node.append_child("Property");
-        prop_node.append_attribute("propertyIndex").set_value(property_idx);
-        auto ndf_type_node = prop_node.append_child("NDFType");
-        ndf_type_node.append_attribute("typeId").set_value(property->property_type);
-        property->to_ndfbin_xml(this, ndf_type_node);
-      }
-
-      obje_node.append_attribute("classIndex").set_value(class_idx);
-
-      if(obj.is_top_object) {
-        auto topo_node = topo.append_child("TOPObject");
-        topo_node.append_attribute("objectIndex").set_value(object_idx);
-      }
-
-      if(obj.export_path.size()) {
-        get_or_add_expr(obj.export_path);
-      }
-
-      object_idx += 1;
-    }
-
-    for(const auto& str : gen_string_items) {
-      auto str_node = strg.append_child("String");
-      str_node.append_attribute("str").set_value(str.c_str());
-    }
-
-    for(const auto &clas_name : gen_clas_table) {
-      auto clas_node = clas.append_child("Class");
-      clas_node.append_attribute("str").set_value(clas_name.c_str());
-    }
-
-    for(const auto &tran_name : gen_tran_table) {
-      auto tran_node = tran.append_child("Tran");
-      tran_node.append_attribute("str").set_value(tran_name.c_str());
-    }
-
-    save_imprs(gen_import_table, impr, "Import");
-    save_imprs(gen_export_table, expr, "Export");
-
-    doc.save_file(path.c_str());
-  }
+  void save_as_ndfbin_xml(fs::path);
+  void save_as_ndfbin(fs::path);
 };
 
 
