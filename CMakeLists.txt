@@ -13,11 +13,11 @@ set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 add_subdirectory(deps/etceterapp)
 
-find_package(argparse REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(fmt REQUIRED)
-find_package(Catch2 REQUIRED)
-find_package(pugixml REQUIRED)
+add_subdirectory(deps/argparse)
+add_subdirectory(deps/spdlog)
+add_subdirectory(deps/fmt)
+add_subdirectory(deps/Catch2)
+add_subdirectory(deps/pugixml)
 
 # add version information
 find_package(Git)

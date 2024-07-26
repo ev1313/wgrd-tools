@@ -4,3 +4,18 @@
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/microsoft/vcpkg
+[submodule "deps/argparse"]
+	path = deps/argparse
+	url = https://github.com/p-ranav/argparse
+[submodule "deps/spdlog"]
+	path = deps/spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "deps/fmt"]
+	path = deps/fmt
+	url = https://github.com/fmtlib/fmt
+[submodule "deps/Catch2"]
+	path = deps/Catch2
+	url = https://github.com/catchorg/Catch2
+[submodule "deps/pugixml"]
+	path = deps/pugixml
+	url = https://github.com/zeux/pugixml
