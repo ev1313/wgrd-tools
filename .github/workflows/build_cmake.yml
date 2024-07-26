@@ -43,4 +43,11 @@ jobs:
       - name: Build (Release configuration)
         run: |
           cmake --build build/ -j8
-
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ndfbin_helper.exe
+          path: build/ndfbin_helper.exe
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ndf_helper.exe
+          path: build/ndf_helper.exe
