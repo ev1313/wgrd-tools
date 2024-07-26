@@ -44,5 +44,5 @@ jobs:
       # run: cmake --build --preset ninja-vcpkg --config Release
       - name: Build (Release configuration)
         run: |
-          cmake --build build/
+          cmake --build -j8 build/
 
