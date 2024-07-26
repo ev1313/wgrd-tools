@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22...3.25)
-project(etceterapp LANGUAGES CXX)
+project(wgrd-tools LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 
