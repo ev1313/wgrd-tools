@@ -656,7 +656,7 @@ void NDF::save_as_ndfbin_xml(fs::path path) {
     }
 
     if(obj.export_path.size()) {
-      get_or_add_expr(obj.export_path);
+      get_or_add_expr(obj.export_path, object_idx);
     }
 
     object_idx += 1;

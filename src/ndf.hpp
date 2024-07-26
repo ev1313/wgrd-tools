@@ -3,6 +3,7 @@
 #include <cassert>
 #include <vector>
 #include <map>
+#include <set>
 #include <ranges>
 #include <format>
 
@@ -1109,6 +1110,7 @@ private:
 
   std::vector<NDFClass> gen_property_table;
   std::vector<std::pair<std::string, uint32_t>> gen_property_items;
+  std::set<std::pair<std::string, uint32_t>> gen_property_set;
 
   void save_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, pugi::xml_node& root_node, const std::string& first_name);
   void save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, std::ostream& stream);
@@ -1178,24 +1180,24 @@ public:
     return get_or_add_impr_indices(vec);
   }
 
-  uint32_t get_or_add_expr_indices(const std::vector<uint32_t>& vec) {
+  uint32_t get_or_add_expr_indices(const std::vector<uint32_t>& vec, uint32_t object_idx) {
     auto it = gen_export_table.find(vec);
     if(it == gen_export_table.end()) {
       gen_export_items.push_back(vec);
-      gen_export_table.insert({vec, gen_export_items.size() - 1});
+      gen_export_table.insert({vec, object_idx});
       return gen_export_items.size() - 1;
     } else {
       return it->second;
     }
   }
 
-  uint32_t get_or_add_expr(std::string expr) {
+  uint32_t get_or_add_expr(std::string expr, uint32_t object_idx) {
     std::vector<uint32_t> vec;
     for(auto str : std::views::split(expr, '/')) {
       std::string foo = std::string(str.begin(), str.end());
       vec.push_back(get_or_add_tran(foo));
     }
-    return get_or_add_expr_indices(vec);
+    return get_or_add_expr_indices(vec, object_idx);
   }
 
   void save_as_ndfbin_xml(fs::path);

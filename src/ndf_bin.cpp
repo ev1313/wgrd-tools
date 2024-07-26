@@ -560,7 +560,6 @@ void NDF::save_as_ndfbin(fs::path output) {
 
   {
     // fill class and property tables
-    uint32_t property_idx = 0;
     for(const auto &[obj_idx, obj] : objects | std::views::enumerate) {
       gen_object_table.insert({obj.name, obj_idx});
 
@@ -571,10 +570,15 @@ void NDF::save_as_ndfbin(fs::path output) {
         uint32_t class_idx = gen_clas_table.size() - 1;
         gen_property_table.emplace_back();
         for(auto& property : obj.properties) {
-          gen_property_table[class_idx].properties.insert({property->property_name, property_idx});
-          gen_property_items.push_back({property->property_name, class_idx});
-
-          property_idx += 1;
+          gen_property_table[class_idx].properties.insert({property->property_name, 0});
+          gen_property_set.insert({property->property_name, class_idx});
+        }
+      } else {
+        for(auto& property : obj.properties) {
+          if(!gen_property_set.contains({property->property_name, clas_it->second})) {
+            gen_property_set.insert({property->property_name, clas_it->second});
+            gen_property_table[clas_it->second].properties.insert({property->property_name, 0});
+          }
         }
       }
 
@@ -583,7 +587,14 @@ void NDF::save_as_ndfbin(fs::path output) {
       }
 
       if(obj.export_path.size()) {
-        get_or_add_expr(obj.export_path);
+        get_or_add_expr(obj.export_path, obj_idx);
+      }
+    }
+    // now generate property indices
+    for(auto&& [clas_idx, clas] : gen_property_table | std::views::enumerate) {
+      for(auto& [prop_name, prop_idx] : clas.properties) {
+        gen_property_items.push_back({prop_name, clas_idx});
+        prop_idx = gen_property_items.size() - 1;
       }
     }
   }
@@ -598,6 +609,7 @@ void NDF::save_as_ndfbin(fs::path output) {
 
     for(auto& property : obj.properties) {
       uint32_t property_idx = gen_property_table[gen_clas_items[obj.class_name]].properties[property->property_name];
+      property->property_idx = property_idx;
       spdlog::debug("writing propidx @0x{:02X} {}", (uint32_t)ofs.tellp(), property_idx);
       ofs.write(reinterpret_cast<char*>(&property_idx), sizeof(property_idx));
       uint32_t ndf_type = property->property_type;
@@ -674,6 +686,7 @@ void NDF::save_as_ndfbin(fs::path output) {
     ofs.write(prop_name.data(), length * sizeof(char));
     uint32_t class_index = class_idx;
     ofs.write(reinterpret_cast<char*>(&class_index), sizeof(class_index));
+    spdlog::debug("writing prop {} {}", prop_name, class_index);
   }
 
   toc_table.PROP.size = (uint32_t)ofs.tellp() - toc_table.PROP.offset;
