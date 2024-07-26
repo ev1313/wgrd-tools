@@ -34,8 +34,8 @@ jobs:
       # This step also runs vcpkg with Binary Caching leveraging GitHub Action cache to
       # store the built packages artifacts.
       - name: Restore from cache the dependencies and generate project files
-        run:
-          - cmake -B build/
+        run: |
+          cmake -B build/
 
       # Build (Release configuration only) the whole project with Ninja (which is spawn by CMake).
       #
@@ -43,6 +43,6 @@ jobs:
       # configuration with the `--config` flag, e.g.:
       # run: cmake --build --preset ninja-vcpkg --config Release
       - name: Build (Release configuration)
-        run:
-          - cmake --build -B build/
+        run: |
+          cmake --build -B build/
 
