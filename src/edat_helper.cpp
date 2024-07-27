@@ -18,6 +18,12 @@ int main(int argc, char **argv) {
     std::cout << program;
     exit(1);
   }
+  
+#ifdef _WIN32
+  std::setlocale(LC_NUMERIC, "en-US");
+#else
+  std::setlocale(LC_NUMERIC, "en_US.UTF-8");
+#endif
 
   if (!program.get<bool>("-v")) {
     spdlog::set_level(spdlog::level::warn);

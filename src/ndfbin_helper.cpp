@@ -23,7 +23,11 @@ int main(int argc, char **argv) {
       .help("instead of parsing the input file, pack the input xml file into a "
             "ndfbin file");
 
+  #ifdef _WIN32
+  std::setlocale(LC_NUMERIC, "en-US");
+  #else
   std::setlocale(LC_NUMERIC, "en_US.UTF-8");
+  #endif
 
   try {
     program.parse_args(argc, argv);
