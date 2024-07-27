@@ -42,12 +42,12 @@ target_include_directories(ndf PUBLIC .)
 add_executable(ndf_helper
         src/ndf_helper.cpp
 )
-target_link_libraries(ndf_helper PRIVATE ndf)
+target_link_libraries(ndf_helper PRIVATE -static ndf)
 
 add_executable(ndfbin_helper
         src/ndfbin_helper.cpp
 )
-target_link_libraries(ndfbin_helper PRIVATE ndf)
+target_link_libraries(ndfbin_helper PRIVATE -static ndf)
 
 #add_executable(ndfbin src/ndfbin.cpp)
 #target_link_libraries(ndfbin PRIVATE etceterapp)
