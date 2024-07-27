@@ -1247,6 +1247,28 @@ public:
 
   void save_as_ndfbin_xml(fs::path);
   void save_as_ndfbin(fs::path);
+
+  void clear() {
+    import_name_table.clear();
+    string_table.clear();
+    // FIXME: load_from_ndfbin_xml should also use this table
+    class_table.clear();
+    property_table.clear();
+    tran_table.clear();
+    objects.clear();
+    gen_object_table.clear();
+    gen_string_items.clear();
+    gen_string_table.clear();
+    gen_clas_items.clear();
+    gen_clas_table.clear();
+    gen_tran_items.clear();
+    gen_tran_table.clear();
+    gen_import_table.clear();
+    gen_import_items.clear();
+    gen_export_table.clear();
+    gen_export_items.clear();
+    gen_property_table.clear();
+  }
 };
 
 

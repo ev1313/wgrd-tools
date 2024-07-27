@@ -586,6 +586,8 @@ void NDF::save_as_ndfbin_xml(fs::path path) {
   gen_export_table.clear();
   gen_export_items.clear();
   gen_property_table.clear();
+  gen_property_items.clear();
+  gen_property_set.clear();
 
   pugi::xml_document doc;
   auto root = doc.append_child("root").append_child("NdfBin").append_child("toc0header");
