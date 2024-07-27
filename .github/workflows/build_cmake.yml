@@ -33,7 +33,7 @@ jobs:
       # store the built packages artifacts.
       - name: Restore from cache the dependencies and generate project files
         run: |
-          cmake -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
 
       # Build (Release configuration only) the whole project with Ninja (which is spawn by CMake).
       #
