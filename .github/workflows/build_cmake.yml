@@ -28,11 +28,11 @@ jobs:
 
       - name: run cmake
         run: |
-          cmake --config Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
 
       - name: Build (Release configuration)
         run: |
-          cmake --build build/ -j8
+          cmake --build build/ -j8 --config Release
       - uses: actions/upload-artifact@v3
         with:
           name: build
