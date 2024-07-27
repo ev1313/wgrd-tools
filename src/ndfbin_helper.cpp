@@ -38,6 +38,13 @@ int main(int argc, char **argv) {
   } else {
     spdlog::set_level(spdlog::level::debug);
   }
+    
+  if(!fs::exists(program.get<std::string>("input"))) {
+    spdlog::error("Input file does not exist");
+    exit(1);
+  }
+
+  fs::create_directories(program.get<std::string>("output"));
 
   if (!program.get<bool>("-p")) {
     NDF ndf;
