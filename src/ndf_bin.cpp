@@ -335,6 +335,7 @@ void NDF::load_from_ndfbin(fs::path path) {
       property->property_name = property_table[prop.propertyIndex].first;
 
       object.properties.push_back(std::move(property));
+      object.property_map.insert({property_table[prop.propertyIndex].first, object.properties.size() - 1});
     }
     objects.push_back(std::move(object));
   }
@@ -532,7 +533,7 @@ void NDF::save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen
 }
 
 void NDF::save_as_ndfbin(fs::path output) {
-  gen_object_table.clear();
+
   gen_string_items.clear();
   gen_string_table.clear();
   gen_clas_items.clear();
@@ -563,8 +564,6 @@ void NDF::save_as_ndfbin(fs::path output) {
   {
     // fill class and property tables
     for(const auto &[obj_idx, obj] : objects | std::views::enumerate) {
-      gen_object_table.insert({obj.name, obj_idx});
-
       auto clas_it = gen_clas_items.find(obj.class_name);
       if(clas_it == gen_clas_items.end()) {
         gen_clas_table.push_back(obj.class_name);

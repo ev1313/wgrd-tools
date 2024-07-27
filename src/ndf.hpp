@@ -21,6 +21,37 @@ struct NDFClass {
   std::map<std::string, uint32_t> properties;
 };
 
+enum NDFPropertyType {
+  Bool = 0x0,
+  Int8 = 0x1,
+  Int32 = 0x2,
+  UInt32 = 0x3,
+  Float32 = 0x5,
+  Float64 = 0x6,
+  String = 0x7,
+  WideString = 0x8,
+  ObjectReference = 0x9,
+  ImportReference = 0x9,
+  F32_vec3 = 0xB,
+  F32_vec4 = 0xC,
+  Color = 0xD,
+  S32_vec3 = 0xE,
+  Matrix = 0xF,
+  List = 0x11,
+  Map = 0x12,
+  Long = 0x13,
+  Blob = 0x14,
+  S16 = 0x18,
+  U16 = 0x19,
+  GUID = 0x1A,
+  PathReference = 0x1C,
+  LocalisationHash = 0x1D,
+  S32_vec2 = 0x1F,
+  F32_vec2 = 0x21,
+  Pair = 0x22,
+  Hash = 0x25
+};
+
 struct NDFProperty {
   uint32_t property_idx;
   uint32_t property_type;
@@ -48,12 +79,19 @@ struct NDFProperty {
   virtual void to_ndfbin(NDF*, std::ostream&) {
     throw std::runtime_error("Not implemented");
   }
+  virtual bool is_object_reference() {
+    return false;
+  }
+  virtual bool is_import_reference() {
+    return false;
+  }
 };
+
 
 struct NDFPropertyBool : NDFProperty {
   bool value;
   NDFPropertyBool() {
-    property_type = 0x0;
+    property_type = NDFPropertyType::Bool;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -89,7 +127,7 @@ public:
 struct NDFPropertyInt8 : NDFProperty {
   uint8_t value;
   NDFPropertyInt8() {
-    property_type = 0x1;
+    property_type = NDFPropertyType::Int8;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -125,8 +163,8 @@ public:
 struct NDFPropertyInt32 : NDFProperty {
   int32_t value;
   NDFPropertyInt32() {
-    property_type = 0x2;
-  }
+    property_type = NDFPropertyType::Int32;
+}
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
   void to_ndf_xml(pugi::xml_node& node) override {
@@ -161,7 +199,7 @@ public:
 struct NDFPropertyUInt32 : NDFProperty {
   uint32_t value;
   NDFPropertyUInt32() {
-    property_type = 0x3;
+    property_type = NDFPropertyType::UInt32;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -197,7 +235,7 @@ public:
 struct NDFPropertyFloat32 : NDFProperty {
   float value;
   NDFPropertyFloat32() {
-    property_type = 0x5;
+    property_type = NDFPropertyType::Float32;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -233,7 +271,7 @@ public:
 struct NDFPropertyFloat64 : NDFProperty {
   double value;
   NDFPropertyFloat64() {
-    property_type = 0x6;
+    property_type = NDFPropertyType::Float64;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -269,7 +307,7 @@ public:
 struct NDFPropertyString : NDFProperty {
   std::string value;
   NDFPropertyString() {
-    property_type = 0x7;
+    property_type = NDFPropertyType::String;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -297,7 +335,7 @@ public:
 struct NDFPropertyWideString : NDFProperty {
   std::string value;
   NDFPropertyWideString() {
-    property_type = 0x8;
+    property_type = NDFPropertyType::WideString;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -327,7 +365,7 @@ struct NDFPropertyF32_vec3 : NDFProperty {
   float y;
   float z;
   NDFPropertyF32_vec3() {
-    property_type = 0xB;
+    property_type = NDFPropertyType::F32_vec3;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -376,7 +414,7 @@ struct NDFPropertyF32_vec4 : NDFProperty {
   float z;
   float w;
   NDFPropertyF32_vec4() {
-    property_type = 0xC;
+    property_type = NDFPropertyType::F32_vec4;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -430,7 +468,7 @@ struct NDFPropertyColor : NDFProperty {
   uint8_t b;
   uint8_t a;
   NDFPropertyColor() {
-    property_type = 0xD;
+    property_type = NDFPropertyType::Color;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -483,7 +521,7 @@ struct NDFPropertyS32_vec3 : NDFProperty {
   int32_t y;
   int32_t z;
   NDFPropertyS32_vec3() {
-    property_type = 0xE;
+    property_type = NDFPropertyType::S32_vec3;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -534,7 +572,7 @@ enum ReferenceType {
 struct NDFPropertyObjectReference : NDFProperty {
   std::string object_name;
   NDFPropertyObjectReference() {
-    property_type = 0x9;
+    property_type = NDFPropertyType::ObjectReference;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -549,6 +587,9 @@ struct NDFPropertyObjectReference : NDFProperty {
     object_name = node.attribute("object").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
     assert(node.attribute("referenceType").as_string() == std::string("object"));
+  }
+  bool is_object_reference() override {
+    return true;
   }
 private:
   #pragma pack(push, 1)
@@ -565,7 +606,7 @@ public:
 struct NDFPropertyImportReference : NDFProperty {
   std::string import_name;
   NDFPropertyImportReference() {
-    property_type = 0x9;
+    property_type = NDFPropertyType::ImportReference;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -581,6 +622,9 @@ struct NDFPropertyImportReference : NDFProperty {
     assert(node.attribute("typeId").as_uint() == property_type);
     assert(node.attribute("referenceType").as_string() == std::string("import"));
   }
+  bool is_import_reference() override {
+    return true;
+  }
 private:
   #pragma pack(push, 1)
   struct NDF_ImportReference {
@@ -595,7 +639,7 @@ public:
 struct NDFPropertyList : NDFProperty {
   std::vector<std::unique_ptr<NDFProperty>> values;
   NDFPropertyList() {
-    property_type = 0x11;
+    property_type = NDFPropertyType::List;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -669,7 +713,7 @@ public:
 struct NDFPropertyS16 : NDFProperty {
   int16_t value;
   NDFPropertyS16() {
-    property_type = 0x18;
+    property_type = NDFPropertyType::S16;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -705,7 +749,7 @@ public:
 struct NDFPropertyU16 : NDFProperty {
   uint16_t value;
   NDFPropertyU16() {
-    property_type = 0x19;
+    property_type = NDFPropertyType::U16;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -742,7 +786,7 @@ public:
 struct NDFPropertyGUID : NDFProperty {
   std::string guid;
   NDFPropertyGUID() {
-    property_type = 0x1A;
+    property_type = NDFPropertyType::GUID;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -783,7 +827,7 @@ public:
 struct NDFPropertyPathReference : NDFProperty {
   std::string path;
   NDFPropertyPathReference() {
-    property_type = 0x1C;
+    property_type = NDFPropertyType::PathReference;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -812,7 +856,7 @@ public:
 struct NDFPropertyLocalisationHash : NDFProperty {
   std::string hash;
   NDFPropertyLocalisationHash() {
-    property_type = 0x1D;
+    property_type = NDFPropertyType::LocalisationHash;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -854,7 +898,7 @@ struct NDFPropertyS32_vec2 : NDFProperty {
   int32_t x;
   int32_t y;
   NDFPropertyS32_vec2() {
-    property_type = 0x1F;
+    property_type = NDFPropertyType::S32_vec2;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -896,7 +940,7 @@ struct NDFPropertyF32_vec2 : NDFProperty {
   float x;
   float y;
   NDFPropertyF32_vec2() {
-    property_type = 0x21;
+    property_type = NDFPropertyType::F32_vec2;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -938,7 +982,7 @@ struct NDFPropertyPair : NDFProperty {
   std::unique_ptr<NDFProperty> first;
   std::unique_ptr<NDFProperty> second;
   NDFPropertyPair() {
-    property_type = 0x22;
+    property_type = NDFPropertyType::Pair;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
@@ -971,6 +1015,52 @@ struct NDFObject {
   bool is_top_object;
   std::string export_path;
   std::vector<std::unique_ptr<NDFProperty>> properties;
+  std::map<std::string, uint32_t> property_map;
+  std::unique_ptr<NDFProperty>& get_property(const std::string& name) {
+    return properties.at(property_map.at(name));
+  }
+};
+
+// FIXME: error checking for hashes?
+struct NDFPropertyHash : NDFProperty {
+  std::string hash;
+  NDFPropertyHash() {
+    property_type = NDFPropertyType::Hash;
+  }
+  void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
+  void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
+  void to_ndf_xml(pugi::xml_node& node) override {
+    auto hash_node = node.append_child(property_name.c_str());
+    hash_node.append_attribute("hash").set_value(hash.c_str());
+    hash_node.append_attribute("typeId").set_value(property_type);
+  }
+  void from_ndf_xml(const pugi::xml_node& node) override {
+    property_name = node.name();
+    hash = node.attribute("hash").as_string();
+    assert(node.attribute("typeId").as_uint() == property_type);
+  }
+private:
+  #pragma pack(push, 1)
+  struct NDF_Hash {
+    uint8_t hash[16];
+  };
+  #pragma pack(pop)
+public:
+  void from_ndfbin(NDF*, std::istream& stream) override {
+    NDF_Hash ndf_hash;
+    stream.read(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_Hash));
+    hash = "";
+    for(auto const &byte : ndf_hash.hash) {
+      hash += std::format("{:02X}", byte);
+    }
+  }
+  void to_ndfbin(NDF*, std::ostream& stream) override {
+    NDF_Hash ndf_hash;
+    for(uint32_t i = 0; i < 8; i++) {
+      std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2, ndf_hash.hash[i], 16);
+    }
+    stream.write(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_Hash));
+  }
 };
 
 struct NDF {
@@ -1025,6 +1115,8 @@ public:
   std::vector<std::pair<std::string, uint32_t>> property_table;
   std::vector<std::string> tran_table;
   std::vector<NDFObject> objects;
+  std::map<std::string, uint32_t> object_map;
+
 
   void load_from_ndfbin_xml(fs::path path);
 
@@ -1067,6 +1159,7 @@ public:
       }
 
       objects.push_back(std::move(object));
+      object_map.insert({object.name, objects.size() - 1});
     }
   }
 
@@ -1135,8 +1228,6 @@ public:
 
   void load_from_ndfbin(fs::path path);
 private:
-  std::map<std::string, uint32_t> gen_object_table;
-
   std::vector<std::string> gen_string_items;
   std::map<std::string, uint32_t> gen_string_table;
 
@@ -1161,11 +1252,14 @@ private:
   void save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, std::ostream& stream);
 public:
   uint32_t get_object(const std::string& str) {
-    auto obj_idx = gen_object_table.find(str);
-    if(obj_idx == gen_object_table.end()) {
+    auto obj_idx = object_map.find(str);
+    if(obj_idx == object_map.end()) {
       return 4294967295;
     }
     return obj_idx->second;
+  }
+  NDFObject& get_obj_ref(const std::string& str) {
+    return objects.at(get_object(str));
   }
 
   uint32_t get_class(const std::string& str) {
@@ -1256,7 +1350,6 @@ public:
     property_table.clear();
     tran_table.clear();
     objects.clear();
-    gen_object_table.clear();
     gen_string_items.clear();
     gen_string_table.clear();
     gen_clas_items.clear();

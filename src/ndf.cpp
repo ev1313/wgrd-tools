@@ -68,6 +68,9 @@ std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndftype(uint32_t ndf
     case 0x22: {
       return std::make_unique<NDFPropertyPair>();
     }
+    case 0x25: {
+      return std::make_unique<NDFPropertyHash>();
+    }
     default: {
       throw std::runtime_error(std::format("Unknown NDFType: {}", ndf_type));
     }
@@ -420,6 +423,16 @@ void NDFPropertyPair::to_ndfbin_xml(NDF* root, pugi::xml_node& node) {
   second->to_ndfbin_xml(root, second_node);
 }
 
+void NDFPropertyHash::from_ndfbin_xml(const NDF*, const pugi::xml_node& node) {
+  hash = node.child("Hash").child("Hash").attribute("data").as_string();
+  spdlog::debug("Hash: {}", hash);
+}
+
+void NDFPropertyHash::to_ndfbin_xml(NDF*, pugi::xml_node& node) {
+  node.append_child("Hash").append_child("Hash").append_attribute("data").set_value(hash.c_str());
+}
+
+
 void NDF::load_from_ndfbin_xml(fs::path path) {
   pugi::xml_document doc;
   pugi::xml_parse_result result = doc.load_file(path.c_str());
@@ -466,9 +479,11 @@ void NDF::load_from_ndfbin_xml(fs::path path) {
       property->property_name = property_iterator->attribute("str").as_string();
 
       object.properties.push_back(std::move(property));
+      object.property_map.insert({property->property_name, object.properties.size() - 1});
     }
 
     objects.push_back(std::move(object));
+    object_map.insert({object.name, object_idx});
   }
 
   for(auto const &topo_node : root.child("TOPO").children()) {
@@ -574,7 +589,6 @@ void NDF::save_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table,
 }
 
 void NDF::save_as_ndfbin_xml(fs::path path) {
-  gen_object_table.clear();
   gen_string_items.clear();
   gen_string_table.clear();
   gen_clas_items.clear();
@@ -593,10 +607,6 @@ void NDF::save_as_ndfbin_xml(fs::path path) {
   auto root = doc.append_child("root").append_child("NdfBin").append_child("toc0header");
 
   auto obje = root.append_child("OBJE");
-
-  for(const auto &[obj_idx, obj] : objects | std::views::enumerate) {
-    gen_object_table.insert({obj.name, obj_idx});
-  }
 
   auto topo = root.append_child("TOPO");
   auto clas = root.append_child("CLAS");
