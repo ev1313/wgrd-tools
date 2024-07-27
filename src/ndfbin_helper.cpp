@@ -42,10 +42,16 @@ int main(int argc, char **argv) {
   if (!program.get<bool>("-p")) {
     NDF ndf;
     ndf.load_from_ndfbin(program.get<std::string>("input"));
-    ndf.save_as_ndf_xml(fs::path(program.get<std::string>("output")) / "output.xml");
+    fs::path out_filename = program.get("input");
+    out_filename = out_filename.filename();
+    out_filename.replace_extension(".xml");
+    ndf.save_as_ndf_xml(fs::path(program.get<std::string>("output")) / out_filename);
   } else {
     NDF ndf;
     ndf.load_from_ndf_xml(program.get<std::string>("input"));
-    ndf.save_as_ndfbin(fs::path(program.get<std::string>("output")) / "output.ndfbin");
+    fs::path out_filename = program.get("input");
+    out_filename = out_filename.filename();
+    out_filename.replace_extension(".ndfbin");
+    ndf.save_as_ndfbin(fs::path(program.get<std::string>("output")) / out_filename);
   }
 }
