@@ -90,10 +90,10 @@ std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndfbin_xml(uint32_t 
 
 std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndf_xml(uint32_t ndf_type, const pugi::xml_node& ndf_node) {
   if(ndf_type == 0x9) {
-    uint32_t reference_type = ndf_node.attribute("referenceType").as_uint();
-    if(reference_type == ReferenceType::Object) {
+    std::string reference_type = ndf_node.attribute("referenceType").as_string();
+    if(reference_type == "object") {
       return std::make_unique<NDFPropertyObjectReference>();
-    } else if(reference_type == ReferenceType::Import) {
+    } else if(reference_type == "import") {
       return std::make_unique<NDFPropertyImportReference>();
     } else {
       throw std::runtime_error(std::format("Unknown ReferenceType: {}", reference_type));

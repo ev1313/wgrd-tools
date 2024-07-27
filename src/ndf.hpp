@@ -542,13 +542,13 @@ struct NDFPropertyObjectReference : NDFProperty {
     auto reference_node = node.append_child(property_name.c_str());
     reference_node.append_attribute("object").set_value(object_name.c_str());
     reference_node.append_attribute("typeId").set_value(property_type);
-    reference_node.append_attribute("referenceType").set_value(ReferenceType::Object);
+    reference_node.append_attribute("referenceType").set_value("object");
   }
   void from_ndf_xml(const pugi::xml_node& node) override {
     property_name = node.name();
     object_name = node.attribute("object").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
-    assert(node.attribute("referenceType").as_uint() == ReferenceType::Object);
+    assert(node.attribute("referenceType").as_string() == std::string("object"));
   }
 private:
   #pragma pack(push, 1)
@@ -573,13 +573,13 @@ struct NDFPropertyImportReference : NDFProperty {
     auto reference_node = node.append_child(property_name.c_str());
     reference_node.append_attribute("import").set_value(import_name.c_str());
     reference_node.append_attribute("typeId").set_value(property_type);
-    reference_node.append_attribute("referenceType").set_value(ReferenceType::Import);
+    reference_node.append_attribute("referenceType").set_value("import");
   }
   void from_ndf_xml(const pugi::xml_node& node) override {
     property_name = node.name();
     import_name = node.attribute("import").as_string();
     assert(node.attribute("typeId").as_uint() == property_type);
-    assert(node.attribute("referenceType").as_uint() == ReferenceType::Import);
+    assert(node.attribute("referenceType").as_string() == std::string("import"));
   }
 private:
   #pragma pack(push, 1)
