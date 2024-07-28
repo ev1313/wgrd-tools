@@ -1,39 +1,24 @@
-name: build_cmake
-on:
-  push:
+name: MSYS2
+on: [push, pull_request]
 
 jobs:
-  job:
-    name: ${{ matrix.os }}-${{ github.workflow }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
-        include:
-          - os: windows-latest
-            triplet: x64-windows
-
+  msys2-ucrt64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
         with:
-          submodules: true
-
-      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
-      - uses: lukka/get-cmake@latest
-
-      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly.
-      # As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
-      - uses: ilammy/msvc-dev-cmd@v1
-
-      - name: run cmake
+          msystem: UCRT64
+          update: true
+          install: git mingw-w64-ucrt-x86_64-gcc
+      - name: CI-Build
         run: |
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-
-      - name: Build (Release configuration)
-        run: |
-          cmake --build build/ -j8 --config Release
+          echo 'Running in MSYS2!'
+          ./ci-build.sh
       - uses: actions/upload-artifact@v3
         with:
           name: ndfbin_helper.exe
-          path: build/Release/ndfbin_helper.exe
+          path: build/ndfbin_helper.exe
