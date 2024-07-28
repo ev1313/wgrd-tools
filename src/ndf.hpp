@@ -43,7 +43,7 @@ enum NDFPropertyType {
   Blob = 0x14,
   S16 = 0x18,
   U16 = 0x19,
-  GUID = 0x1A,
+  NDFGUID = 0x1A, // Windows doesn't allow GUID as enum name???
   PathReference = 0x1C,
   LocalisationHash = 0x1D,
   S32_vec2 = 0x1F,
@@ -786,7 +786,7 @@ public:
 struct NDFPropertyGUID : NDFProperty {
   std::string guid;
   NDFPropertyGUID() {
-    property_type = NDFPropertyType::GUID;
+    property_type = NDFPropertyType::NDFGUID;
   }
   void from_ndfbin_xml(const NDF* root, const pugi::xml_node& node) override;
   void to_ndfbin_xml(NDF* root, pugi::xml_node& node) override;
