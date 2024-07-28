@@ -1254,6 +1254,7 @@ public:
   uint32_t get_object(const std::string& str) {
     auto obj_idx = object_map.find(str);
     if(obj_idx == object_map.end()) {
+      spdlog::warn("did not find object {} {}", str, object_map.size());
       return 4294967295;
     }
     return obj_idx->second;

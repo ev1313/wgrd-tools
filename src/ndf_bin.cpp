@@ -337,6 +337,7 @@ void NDF::load_from_ndfbin(fs::path path) {
       object.properties.push_back(std::move(property));
       object.property_map.insert({property_table[prop.propertyIndex].first, object.properties.size() - 1});
     }
+    object_map.insert({object.name, objects.size()});
     objects.push_back(std::move(object));
   }
 
