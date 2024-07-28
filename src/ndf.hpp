@@ -21,7 +21,7 @@ struct NDFClass {
   std::map<std::string, uint32_t> properties;
 };
 
-enum class NDFPropertyType {
+enum NDFPropertyType {
   Bool = 0x0,
   Int8 = 0x1,
   Int32 = 0x2,
@@ -1081,9 +1081,9 @@ private:
     if(object_idx == 4294967295) {
       return;
     }
-
-    import_name_table[object_idx] = current_import_path | std::views::join_with('/') | std::ranges::to<std::string>();
-    import_name_table[object_idx] += std::string("/") + tran_iterator->attribute("str").as_string();
+    auto foo = current_import_path | std::views::join_with('/');
+    std::string tmp(foo.begin(), foo.end());
+    import_name_table[object_idx] = tmp + std::string("/") + tran_iterator->attribute("str").as_string();
   }
 
   void iterate_exprs(const pugi::xml_node& root, const pugi::xml_node& expr_node, std::vector<std::string> current_export_path) {
@@ -1103,8 +1103,9 @@ private:
       return;
     }
 
-    objects[object_idx].export_path = current_export_path | std::views::join_with('/') | std::ranges::to<std::string>();
-    objects[object_idx].export_path += std::string("/") + tran_iterator->attribute("str").as_string();
+    auto foo = current_export_path | std::views::join_with('/');
+    std::string tmp(foo.begin(), foo.end());
+    objects[object_idx].export_path = tmp + std::string("/") + tran_iterator->attribute("str").as_string();
   }
 
 public:
@@ -1190,8 +1191,9 @@ public:
       return;
     }
 
-    import_name_table[index] = current_import_path | std::views::join_with('/') | std::ranges::to<std::string>();
-    import_name_table[index] += std::string("/") + tran_table[tran_index];
+    auto foo = current_import_path | std::views::join_with('/');
+    std::string tmp(foo.begin(), foo.end());
+    import_name_table[index] = tmp + std::string("/") + tran_table[tran_index];
     spdlog::debug("Import: {}", import_name_table[index]);
   }
 
@@ -1221,8 +1223,9 @@ public:
       return;
     }
 
-    objects[index].export_path = current_export_path | std::views::join_with('/') | std::ranges::to<std::string>();
-    objects[index].export_path += std::string("/") + tran_table[tran_index];
+    auto test = current_export_path | std::views::join_with('/');
+    std::string tmp(test.begin(), test.end());
+    objects[index].export_path = tmp + std::string("/") + tran_table[tran_index];
     spdlog::debug("Export: {}", objects[index].export_path);
   }
 
