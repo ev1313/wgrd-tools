@@ -1216,11 +1216,11 @@ public:
 
   bool change_object_name(const std::string& previous_name, const std::string& name) {
     if(object_map.contains(name)) {
-      spdlog::info("change_object_name: object {} does already exist", name);
+      spdlog::warn("change_object_name: object {} does already exist", name);
       return false;
     }
     if(!object_map.contains(previous_name)) {
-      spdlog::info("change_object_name: object {} does not exist", previous_name);
+      spdlog::warn("change_object_name: object {} does not exist", previous_name);
       return false;
     }
     auto& object = get_object(previous_name);
@@ -1233,11 +1233,11 @@ public:
 
   bool copy_object(const std::string& obj_name, const std::string& new_name) {
     if(object_map.contains(new_name)) {
-      spdlog::info("copy_object: object {} does already exist", new_name);
+      spdlog::warn("copy_object: object {} does already exist", new_name);
       return false;
     }
     if(!object_map.contains(obj_name)) {
-      spdlog::info("copy_object: object {} does not exist", obj_name);
+      spdlog::warn("copy_object: object {} does not exist", obj_name);
       return false;
     }
     auto& object = get_object(obj_name);
@@ -1249,12 +1249,11 @@ public:
 
   bool remove_object(const std::string& name) {
     if(!object_map.contains(name)) {
-      spdlog::info("remove_object: object {} does not exist", name);
+      spdlog::warn("remove_object: object {} does not exist", name);
       return false;
     }
-    //auto obj_idx = object_map.find(name);
-    // FIXME
-    return false;
+    object_map.erase(name);
+    return true;
   }
 
   uint32_t get_or_add_string(const std::string& str) {
