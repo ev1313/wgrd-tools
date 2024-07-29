@@ -111,7 +111,7 @@ void NDF::save_as_ndf_xml(fs::path path) {
   pugi::xml_document doc;
   auto root = doc.append_child("NDF");
 
-  for(const auto &obj : objects) {
+  for(const auto &[name, obj] : object_map) {
     auto object_node = root.append_child(obj.name.c_str());
     object_node.append_attribute("class") = obj.class_name.c_str();
     object_node.append_attribute("export_path") = obj.export_path.c_str();
@@ -145,9 +145,9 @@ void NDF::load_from_ndf_xml(fs::path path) {
       object.properties.push_back(std::move(property));
     }
 
-    objects.push_back(std::move(object));
-    object_map.insert({object.name, objects.size() - 1});
+    object_map.insert({object.name, std::move(object)});
   }
+  fill_gen_object();
 }
 
 void NDF::load_imprs(std::istream &stream, std::vector<std::string> current_import_path) {
@@ -209,8 +209,10 @@ void NDF::load_exprs(std::istream &stream, std::vector<std::string> current_expo
     return;
   }
 
+  auto& obj = get_object(gen_object_items[index]);
+
   auto test = current_export_path | std::views::join_with('/');
   std::string tmp(test.begin(), test.end());
-  objects[index].export_path = tmp + std::string("/") + tran_table[tran_index];
-  spdlog::debug("Export: {}", objects[index].export_path);
+  obj.export_path = tmp + std::string("/") + tran_table[tran_index];
+  spdlog::debug("Export: {}", obj.export_path);
 }

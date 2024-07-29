@@ -6,6 +6,8 @@
 #include <set>
 #include <ranges>
 
+#include "tsl/ordered_map.h"
+
 #include "spdlog/spdlog.h"
 
 #include "pugixml.hpp"
@@ -1140,8 +1142,7 @@ public:
   std::vector<std::string> class_table;
   std::vector<std::pair<std::string, uint32_t>> property_table;
   std::vector<std::string> tran_table;
-  std::vector<NDFObject> objects;
-  std::map<std::string, uint32_t> object_map;
+  tsl::ordered_map<std::string, NDFObject> object_map;
 
   void save_as_ndf_xml(fs::path path);
   void load_imprs(std::istream &stream, std::vector<std::string> current_import_path);
@@ -1149,6 +1150,7 @@ public:
   void load_from_ndf_xml(fs::path path);
 private:
   std::vector<std::string> gen_object_items;
+  std::map<std::string, uint32_t> gen_object_table;
 
   std::vector<std::string> gen_string_items;
   std::map<std::string, uint32_t> gen_string_table;
@@ -1171,17 +1173,30 @@ private:
   std::set<std::pair<std::string, uint32_t>> gen_property_set;
 
   void save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, std::ostream& stream);
-public:
-  uint32_t get_object(const std::string& str) {
-    auto obj_idx = object_map.find(str);
-    if(obj_idx == object_map.end()) {
-      spdlog::warn("did not find object {} {}", str, object_map.size());
+
+  // gets called by every save_as_ndfbin
+  void fill_gen_object() {
+    for(const auto& [idx, it] : object_map | std::views::enumerate) {
+      gen_object_items.push_back(it.second.name);
+      gen_object_table.insert({it.second.name, gen_object_items.size()-1});
+    }
+  }
+
+  // used for object reference
+  uint32_t get_object_index(const std::string& name) {
+    auto obj_idx = gen_object_table.find(name);
+    if(obj_idx == gen_object_table.end()) {
       return 4294967295;
     }
     return obj_idx->second;
   }
-  NDFObject& get_obj_ref(const std::string& str) {
-    return objects.at(get_object(str));
+  // used for object references
+  uint32_t get_class_of_object(const std::string& name) {
+    auto object_idx = get_object_index(name);
+    if(object_idx == 4294967295) {
+      return 4294967295;
+    }
+    return get_class(get_object(name).class_name);
   }
 
   uint32_t get_class(const std::string& str) {
@@ -1190,6 +1205,13 @@ public:
       return 4294967295;
     }
     return obj_idx->second;
+  }
+  friend class NDFPropertyObjectReference;
+  friend class NDFPropertyImportReference;
+
+public:
+  NDFObject& get_object(const std::string& str) {
+    return object_map.at(str);
   }
 
   bool change_object_name(const std::string& previous_name, const std::string& name) {
@@ -1201,11 +1223,11 @@ public:
       spdlog::info("change_object_name: object {} does not exist", previous_name);
       return false;
     }
-    auto& object = get_obj_ref(previous_name);
-    auto entry = object_map.extract(previous_name);
-    entry.key() = name;
-    object_map.insert(std::move(entry));
-    object.name = name;
+    auto& object = get_object(previous_name);
+    const auto it = object_map.find(previous_name);
+    object_map[name] = object.get_copy();
+    object_map[name].name = name;
+    object_map.erase(it);
     return true;
   }
 
@@ -1218,11 +1240,10 @@ public:
       spdlog::info("copy_object: object {} does not exist", obj_name);
       return false;
     }
-    auto& object = get_obj_ref(obj_name);
+    auto& object = get_object(obj_name);
     auto new_object = object.get_copy();
     new_object.name = new_name;
-    object_map.insert({new_name, objects.size()});
-    objects.push_back(std::move(new_object));
+    object_map.insert({new_name, std::move(new_object)});
     return true;
   }
 
@@ -1234,13 +1255,6 @@ public:
     //auto obj_idx = object_map.find(name);
     // FIXME
     return false;
-  }
-
-  uint32_t get_class_of_object(uint32_t object_idx) {
-    if(object_idx == 4294967295) {
-      return 4294967295;
-    }
-    return get_class(objects[object_idx].class_name);
   }
 
   uint32_t get_or_add_string(const std::string& str) {

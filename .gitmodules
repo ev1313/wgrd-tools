@@ -19,3 +19,6 @@
 [submodule "deps/pugixml"]
 	path = deps/pugixml
 	url = https://github.com/zeux/pugixml
+[submodule "deps/ordered-map"]
+	path = deps/ordered-map
+	url = https://github.com/Tessil/ordered-map

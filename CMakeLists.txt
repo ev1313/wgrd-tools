@@ -21,6 +21,7 @@ add_subdirectory(deps/spdlog)
 add_subdirectory(deps/fmt)
 add_subdirectory(deps/Catch2)
 add_subdirectory(deps/pugixml)
+add_subdirectory(deps/ordered-map)
 
 # add version information
 find_package(Git)
@@ -37,7 +38,7 @@ else ()
 endif ()
 
 add_library(ndf src/ndf.cpp src/ndfbin.cpp)
-target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml fmt::fmt)
+target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml fmt::fmt tsl::ordered_map)
 target_include_directories(ndf PUBLIC .)
 
 add_executable(ndfbin_helper

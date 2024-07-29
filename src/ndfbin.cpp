@@ -54,8 +54,8 @@ void NDFPropertyObjectReference::to_ndfbin(NDF* root, std::ostream& stream) {
   uint32_t reference_type = ReferenceType::Object;
   stream.write(reinterpret_cast<char*>(&reference_type), sizeof(reference_type));
   NDF_ObjectReference ndf_object_reference;
-  ndf_object_reference.object_index = root->get_object(object_name);
-  ndf_object_reference.class_index = root->get_class_of_object(ndf_object_reference.object_index);
+  ndf_object_reference.object_index = root->get_object_index(object_name);
+  ndf_object_reference.class_index = root->get_class_of_object(object_name);
   stream.write(reinterpret_cast<char*>(&ndf_object_reference), sizeof(NDF_ObjectReference));
 }
 
@@ -314,7 +314,7 @@ void NDF::load_from_ndfbin(fs::path path) {
     file.read(reinterpret_cast<char*>(&obj), sizeof(obj));
 
     NDFObject object;
-    object.name = "Object_" + std::to_string(objects.size());
+    object.name = "Object_" + std::to_string(object_map.size());
     obj.classIndex = obj.classIndex;
     object.class_name = class_table[obj.classIndex];
 
@@ -337,9 +337,10 @@ void NDF::load_from_ndfbin(fs::path path) {
       object.properties.push_back(std::move(property));
       object.property_map.insert({property_table[prop.propertyIndex].first, object.properties.size() - 1});
     }
-    object_map.insert({object.name, objects.size()});
-    objects.push_back(std::move(object));
+    object_map.insert({object.name, std::move(object)});
   }
+
+  fill_gen_object();
 
   // load exports
   file.seekg(toc.EXPR.offset);
@@ -354,7 +355,7 @@ void NDF::load_from_ndfbin(fs::path path) {
   while ((uint32_t)file.tellg() < topo_endoffset) {
     uint32_t object_index;
     file.read(reinterpret_cast<char*>(&object_index), sizeof(object_index));
-    objects[object_index].is_top_object = true;
+    object_map[gen_object_items[object_index]].is_top_object = true;
   }
 }
 
@@ -534,7 +535,8 @@ void NDF::save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen
 }
 
 void NDF::save_as_ndfbin(fs::path output) {
-
+  gen_object_items.clear();
+  gen_object_table.clear();
   gen_string_items.clear();
   gen_string_table.clear();
   gen_clas_items.clear();
@@ -547,6 +549,8 @@ void NDF::save_as_ndfbin(fs::path output) {
   gen_export_table.clear();
   gen_export_items.clear();
   gen_property_table.clear();
+
+  fill_gen_object();
 
   NDFBinHeader header;
   TOCTable toc_table;
@@ -564,7 +568,9 @@ void NDF::save_as_ndfbin(fs::path output) {
 
   {
     // fill class and property tables
-    for(const auto &[obj_idx, obj] : objects | std::views::enumerate) {
+    // iterating object_map here works, because std::map is ordered by key
+    for(const auto &[obj_idx, it] : object_map | std::views::enumerate) {
+      const auto& obj = it.second;
       auto clas_it = gen_clas_items.find(obj.class_name);
       if(clas_it == gen_clas_items.end()) {
         gen_clas_table.push_back(obj.class_name);
@@ -604,7 +610,8 @@ void NDF::save_as_ndfbin(fs::path output) {
   // write OBJE
   // writing the properties also fills the string table
   spdlog::debug("writing objects @0x{:02X}", (uint32_t)ofs.tellp());
-  for(const auto &[obj_idx, obj] : objects | std::views::enumerate) {
+  for(const auto &[obj_idx, it] : object_map | std::views::enumerate) {
+    const auto& obj = it.second;
     uint32_t class_idx = gen_clas_items[obj.class_name];
     spdlog::debug("writing classidx @0x{:02X} {}", (uint32_t)ofs.tellp(), class_idx);
     ofs.write(reinterpret_cast<char*>(&class_idx), sizeof(class_idx));
@@ -652,7 +659,7 @@ void NDF::save_as_ndfbin(fs::path output) {
 
   spdlog::debug("writing chunk @0x{:02X}", (uint32_t)ofs.tellp());
 
-  uint32_t object_count = objects.size();
+  uint32_t object_count = object_map.size();
   ofs.write(reinterpret_cast<char*>(&object_count), sizeof(object_count));
 
   toc_table.CHNK.size = (uint32_t)ofs.tellp() - toc_table.CHNK.offset;
