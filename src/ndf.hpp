@@ -1133,48 +1133,6 @@ public:
 
 struct NDF {
 private:
-  void iterate_imprs(const pugi::xml_node& root, const pugi::xml_node& impr_node, std::vector<std::string> current_import_path) {
-    uint32_t tran_idx = impr_node.attribute("tranIndex").as_uint();
-    auto tran_iterator = root.child("TRAN").children().begin();
-    std::advance(tran_iterator, tran_idx);
-
-    uint32_t object_idx = impr_node.attribute("index").as_uint();
-
-    for(auto const & impr_child_node : impr_node.children()) {
-      current_import_path.push_back(tran_iterator->attribute("str").as_string());
-      iterate_imprs(root, impr_child_node, current_import_path);
-      current_import_path.pop_back();
-    }
-
-    if(object_idx == 4294967295) {
-      return;
-    }
-    auto foo = current_import_path | std::views::join_with('/');
-    std::string tmp(foo.begin(), foo.end());
-    import_name_table[object_idx] = tmp + std::string("/") + tran_iterator->attribute("str").as_string();
-  }
-
-  void iterate_exprs(const pugi::xml_node& root, const pugi::xml_node& expr_node, std::vector<std::string> current_export_path) {
-    uint32_t tran_idx = expr_node.attribute("tranIndex").as_uint();
-    auto tran_iterator = root.child("TRAN").children().begin();
-    std::advance(tran_iterator, tran_idx);
-    
-    uint32_t object_idx = expr_node.attribute("index").as_uint();
-
-    for(auto const & expr_child_node : expr_node.children()) {
-      current_export_path.push_back(tran_iterator->attribute("str").as_string());
-      iterate_exprs(root, expr_child_node, current_export_path);
-      current_export_path.pop_back();
-    }
-    
-    if(object_idx == 4294967295) {
-      return;
-    }
-
-    auto foo = current_export_path | std::views::join_with('/');
-    std::string tmp(foo.begin(), foo.end());
-    objects[object_idx].export_path = tmp + std::string("/") + tran_iterator->attribute("str").as_string();
-  }
 
 public:
   std::map<unsigned int, std::string> import_name_table;
@@ -1185,113 +1143,10 @@ public:
   std::vector<NDFObject> objects;
   std::map<std::string, uint32_t> object_map;
 
-  void save_as_ndf_xml(fs::path path) {
-    pugi::xml_document doc;
-    auto root = doc.append_child("NDF");
-
-    for(const auto &obj : objects) {
-      auto object_node = root.append_child(obj.name.c_str());
-      object_node.append_attribute("class") = obj.class_name.c_str();
-      object_node.append_attribute("export_path") = obj.export_path.c_str();
-      object_node.append_attribute("is_top_object") = obj.is_top_object;
-
-      for(const auto &prop : obj.properties) {
-        prop->to_ndf_xml(object_node);
-      }
-    }
-
-    doc.save_file(path.c_str());
-  }
-
-  void load_from_ndf_xml(fs::path path) {
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file(path.c_str());
-    spdlog::debug("Load result: {}", result.description());
-    assert(result.status == pugi::status_ok);
-
-    for(const auto &obj : doc.child("NDF").children()) {
-      NDFObject object;
-      object.name = obj.name();
-      object.class_name = obj.attribute("class").as_string();
-      object.export_path = obj.attribute("export_path").as_string();
-      object.is_top_object = obj.attribute("is_top_object").as_bool();
-
-      for(const auto &prop : obj.children()) {
-        uint32_t ndf_type = prop.attribute("typeId").as_uint();
-        std::unique_ptr<NDFProperty> property = NDFProperty::get_property_from_ndf_xml(ndf_type, prop);
-        property->from_ndf_xml(prop);
-        object.properties.push_back(std::move(property));
-      }
-
-      objects.push_back(std::move(object));
-      object_map.insert({object.name, objects.size() - 1});
-    }
-  }
-
-  void load_imprs(std::istream &stream, std::vector<std::string> current_import_path) {
-    uint32_t tran_index;
-    stream.read(reinterpret_cast<char*>(&tran_index), sizeof(uint32_t));
-    uint32_t index;
-    stream.read(reinterpret_cast<char*>(&index), sizeof(uint32_t));
-    uint32_t count;
-    stream.read(reinterpret_cast<char*>(&count), sizeof(uint32_t));
-
-    uint32_t begin_offset = (uint32_t)stream.tellg();
-    if(count > 0) {
-      std::vector<uint32_t> offsets;
-      offsets.resize(count);
-      stream.read(reinterpret_cast<char*>(offsets.data()), sizeof(uint32_t) * count);
-
-      for(uint32_t offset : offsets) {
-        spdlog::debug("assertion @0x{:02X} is 0x{:02X} should be 0x{:02X}", begin_offset, ((uint32_t)stream.tellg() - begin_offset), offset);
-        assert(offset == ((uint32_t)stream.tellg() - begin_offset));
-        current_import_path.push_back(tran_table[tran_index]);
-        load_imprs(stream, current_import_path);
-        current_import_path.pop_back();
-      }
-    }
-
-    if(index == 4294967295) {
-      return;
-    }
-
-    auto foo = current_import_path | std::views::join_with('/');
-    std::string tmp(foo.begin(), foo.end());
-    import_name_table[index] = tmp + std::string("/") + tran_table[tran_index];
-    spdlog::debug("Import: {}", import_name_table[index]);
-  }
-
-  void load_exprs(std::istream &stream, std::vector<std::string> current_export_path) {
-    uint32_t tran_index;
-    stream.read(reinterpret_cast<char*>(&tran_index), sizeof(uint32_t));
-    uint32_t index;
-    stream.read(reinterpret_cast<char*>(&index), sizeof(uint32_t));
-    uint32_t count;
-    stream.read(reinterpret_cast<char*>(&count), sizeof(uint32_t));
-
-    uint32_t begin_offset = (uint32_t)stream.tellg();
-    if(count > 0) {
-      std::vector<uint32_t> offsets;
-      offsets.resize(count);
-      stream.read(reinterpret_cast<char*>(offsets.data()), sizeof(uint32_t) * count);
-
-      for(uint32_t offset : offsets) {
-        assert(offset == ((uint32_t)stream.tellg() - begin_offset));
-        current_export_path.push_back(tran_table[tran_index]);
-        load_exprs(stream, current_export_path);
-        current_export_path.pop_back();
-      }
-    }
-
-    if(index == 4294967295) {
-      return;
-    }
-
-    auto test = current_export_path | std::views::join_with('/');
-    std::string tmp(test.begin(), test.end());
-    objects[index].export_path = tmp + std::string("/") + tran_table[tran_index];
-    spdlog::debug("Export: {}", objects[index].export_path);
-  }
+  void save_as_ndf_xml(fs::path path);
+  void load_imprs(std::istream &stream, std::vector<std::string> current_import_path);
+  void load_exprs(std::istream &stream, std::vector<std::string> current_export_path);
+  void load_from_ndf_xml(fs::path path);
 private:
   std::vector<std::string> gen_object_items;
 
@@ -1315,7 +1170,6 @@ private:
   std::vector<std::pair<std::string, uint32_t>> gen_property_items;
   std::set<std::pair<std::string, uint32_t>> gen_property_set;
 
-  void save_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, pugi::xml_node& root_node, const std::string& first_name);
   void save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen_table, std::ostream& stream);
 public:
   uint32_t get_object(const std::string& str) {
