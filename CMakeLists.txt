@@ -39,19 +39,12 @@ endif ()
 add_library(ndf src/ndf.cpp src/ndf_bin.cpp)
 target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml fmt::fmt)
 target_include_directories(ndf PUBLIC .)
-add_executable(ndf_helper
-        src/ndf_helper.cpp
-)
-target_link_libraries(ndf_helper PRIVATE -static ndf)
 
 add_executable(ndfbin_helper
         src/ndfbin_helper.cpp
 )
 target_link_libraries(ndfbin_helper PRIVATE -static ndf)
 
-#add_executable(ndfbin src/ndfbin.cpp)
-#target_link_libraries(ndfbin PRIVATE etceterapp)
-#
 #add_executable(edat
 #        src/edat.cpp
 #)
