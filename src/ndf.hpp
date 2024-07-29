@@ -56,6 +56,7 @@ struct NDFProperty {
   uint32_t property_idx;
   uint32_t property_type;
   std::string property_name;
+  NDFProperty() = default;
   virtual ~NDFProperty() = default;
   static std::unique_ptr<NDFProperty> get_property_from_ndftype(uint32_t ndf_type);
   static std::unique_ptr<NDFProperty> get_property_from_ndfbin_xml(uint32_t ndf_type, const pugi::xml_node& ndf_node);
@@ -85,6 +86,7 @@ struct NDFProperty {
   virtual bool is_import_reference() {
     return false;
   }
+  virtual std::unique_ptr<NDFProperty> get_copy() = 0;
 };
 
 
@@ -122,6 +124,10 @@ public:
     ndf_bool.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_bool), sizeof(NDF_Bool));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyBool>(*this);
+  }
 };
 
 struct NDFPropertyInt8 : NDFProperty {
@@ -157,6 +163,10 @@ public:
     NDF_Int8 ndf_int8;
     ndf_int8.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_Int8));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyInt8>(*this);
   }
 };
 
@@ -194,6 +204,10 @@ public:
     ndf_int32.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_int32), sizeof(NDF_Int32));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyInt32>(*this);
+  }
 };
 
 struct NDFPropertyUInt32 : NDFProperty {
@@ -229,6 +243,10 @@ public:
     NDF_UInt32 ndf_uint32;
     ndf_uint32.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_uint32), sizeof(NDF_UInt32));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyUInt32>(*this);
   }
 };
 
@@ -266,6 +284,10 @@ public:
     ndf_float32.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_float32), sizeof(NDF_Float32));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyFloat32>(*this);
+  }
 };
 
 struct NDFPropertyFloat64 : NDFProperty {
@@ -302,6 +324,10 @@ public:
     ndf_float64.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_float64), sizeof(NDF_Float64));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyFloat64>(*this);
+  }
 };
 
 struct NDFPropertyString : NDFProperty {
@@ -330,6 +356,10 @@ private:
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyString>(*this);
+  }
 };
 
 struct NDFPropertyWideString : NDFProperty {
@@ -358,6 +388,10 @@ private:
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyWideString>(*this);
+  }
 };
 
 struct NDFPropertyF32_vec3 : NDFProperty {
@@ -405,6 +439,10 @@ public:
     ndf_f32_vec3.y = y;
     ndf_f32_vec3.z = z;
     stream.write(reinterpret_cast<char*>(&ndf_f32_vec3), sizeof(NDF_F32_vec3));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyF32_vec3>(*this);
   }
 };
 
@@ -460,6 +498,10 @@ public:
     ndf_f32_vec4.w = w;
     stream.write(reinterpret_cast<char*>(&ndf_f32_vec4), sizeof(NDF_F32_vec4));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyF32_vec4>(*this);
+  }
 };
 
 struct NDFPropertyColor : NDFProperty {
@@ -514,6 +556,10 @@ public:
     ndf_color.a = a;
     stream.write(reinterpret_cast<char*>(&ndf_color), sizeof(NDF_Color));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyColor>(*this);
+  }
 };
 
 struct NDFPropertyS32_vec3 : NDFProperty {
@@ -562,6 +608,10 @@ public:
     ndf_s32_vec3.z = z;
     stream.write(reinterpret_cast<char*>(&ndf_s32_vec3), sizeof(NDF_S32_vec3));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyS32_vec3>(*this);
+  }
 };
 
 enum ReferenceType {
@@ -601,6 +651,10 @@ private:
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyObjectReference>(*this);
+  }
 };
 
 struct NDFPropertyImportReference : NDFProperty {
@@ -634,6 +688,10 @@ private:
 public:
   void from_ndfbin(NDF* root, std::istream& stream) override;
   void to_ndfbin(NDF* root, std::ostream& stream) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyImportReference>(*this);
+  }
 };
 
 struct NDFPropertyList : NDFProperty {
@@ -666,6 +724,14 @@ private:
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    auto ret = std::make_unique<NDFPropertyList>();
+    for(auto const &value : values) {
+      ret->values.push_back(value->get_copy());
+    }
+    return ret;
+  }
 };
 
 struct NDFPropertyMap : NDFProperty {
@@ -708,6 +774,14 @@ private:
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    auto ret = std::make_unique<NDFPropertyMap>();
+    for(auto const &[key, value] : values) {
+      ret->values.push_back({key->get_copy(), value->get_copy()});
+    }
+    return ret;
+  }
 };
 
 struct NDFPropertyS16 : NDFProperty {
@@ -744,6 +818,10 @@ public:
     ndf_s16.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_S16));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyS16>(*this);
+  }
 };
 
 struct NDFPropertyU16 : NDFProperty {
@@ -779,6 +857,10 @@ public:
     NDF_U16 ndf_u16;
     ndf_u16.value = value;
     stream.write(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_U16));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyU16>(*this);
   }
 };
 
@@ -822,6 +904,10 @@ public:
     }
     stream.write(reinterpret_cast<char*>(&ndf_guid), sizeof(NDF_GUID));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyGUID>(*this);
+  }
 };
 
 struct NDFPropertyPathReference : NDFProperty {
@@ -850,6 +936,10 @@ private:
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyPathReference>(*this);
+  }
 };
 
 // FIXME: error checking for hashes?
@@ -891,6 +981,10 @@ public:
       std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2, ndf_hash.hash[i], 16);
     }
     stream.write(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_LocalisationHash));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyLocalisationHash>(*this);
   }
 };
 
@@ -934,6 +1028,10 @@ public:
     ndf_s32_vec2.y = y;
     stream.write(reinterpret_cast<char*>(&ndf_s32_vec2), sizeof(NDF_S32_vec2));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyS32_vec2>(*this);
+  }
 };
 
 struct NDFPropertyF32_vec2 : NDFProperty {
@@ -976,6 +1074,10 @@ public:
     ndf_f32_vec2.y = y;
     stream.write(reinterpret_cast<char*>(&ndf_f32_vec2), sizeof(NDF_F32_vec2));
   }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyF32_vec2>(*this);
+  }
 };
 
 struct NDFPropertyPair : NDFProperty {
@@ -1007,17 +1109,12 @@ struct NDFPropertyPair : NDFProperty {
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
-};
-
-struct NDFObject {
-  std::string name;
-  std::string class_name;
-  bool is_top_object;
-  std::string export_path;
-  std::vector<std::unique_ptr<NDFProperty>> properties;
-  std::map<std::string, uint32_t> property_map;
-  std::unique_ptr<NDFProperty>& get_property(const std::string& name) {
-    return properties.at(property_map.at(name));
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    auto ret = std::make_unique<NDFPropertyPair>();
+    ret->first = first->get_copy();
+    ret->second = second->get_copy();
+    return ret;
   }
 };
 
@@ -1060,6 +1157,34 @@ public:
       std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2, ndf_hash.hash[i], 16);
     }
     stream.write(reinterpret_cast<char*>(&ndf_hash), sizeof(NDF_Hash));
+  }
+public:
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyHash>(*this);
+  }
+};
+
+struct NDFObject {
+  std::string name;
+  std::string class_name;
+  bool is_top_object;
+  std::string export_path;
+  std::vector<std::unique_ptr<NDFProperty>> properties;
+  std::map<std::string, uint32_t> property_map;
+  std::unique_ptr<NDFProperty>& get_property(const std::string& name) {
+    return properties.at(property_map.at(name));
+  }
+public:
+  NDFObject get_copy() {
+    NDFObject ret;
+    ret.name = name;
+    ret.class_name = class_name;
+    ret.is_top_object = is_top_object;
+    ret.export_path = export_path;
+    for(auto const &prop : properties) {
+      ret.properties.push_back(prop->get_copy());
+    }
+    return ret;
   }
 };
 
@@ -1231,6 +1356,8 @@ public:
 
   void load_from_ndfbin(fs::path path);
 private:
+  std::vector<std::string> gen_object_items;
+
   std::vector<std::string> gen_string_items;
   std::map<std::string, uint32_t> gen_string_table;
 
@@ -1272,6 +1399,50 @@ public:
       return 4294967295;
     }
     return obj_idx->second;
+  }
+
+  bool change_object_name(const std::string& previous_name, const std::string& name) {
+    if(object_map.contains(name)) {
+      spdlog::info("change_object_name: object {} does already exist", name);
+      return false;
+    }
+    if(!object_map.contains(previous_name)) {
+      spdlog::info("change_object_name: object {} does not exist", previous_name);
+      return false;
+    }
+    auto& object = get_obj_ref(previous_name);
+    auto entry = object_map.extract(previous_name);
+    entry.key() = name;
+    object_map.insert(std::move(entry));
+    object.name = name;
+    return true;
+  }
+
+  bool copy_object(const std::string& obj_name, const std::string& new_name) {
+    if(object_map.contains(new_name)) {
+      spdlog::info("copy_object: object {} does already exist", new_name);
+      return false;
+    }
+    if(!object_map.contains(obj_name)) {
+      spdlog::info("copy_object: object {} does not exist", obj_name);
+      return false;
+    }
+    auto& object = get_obj_ref(obj_name);
+    auto new_object = object.get_copy();
+    new_object.name = new_name;
+    object_map.insert({new_name, objects.size()});
+    objects.push_back(std::move(new_object));
+    return true;
+  }
+
+  bool remove_object(const std::string& name) {
+    if(!object_map.contains(name)) {
+      spdlog::info("remove_object: object {} does not exist", name);
+      return false;
+    }
+    //auto obj_idx = object_map.find(name);
+    // FIXME
+    return false;
   }
 
   uint32_t get_class_of_object(uint32_t object_idx) {
