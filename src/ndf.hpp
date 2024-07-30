@@ -23,7 +23,7 @@ struct NDFClass {
   std::map<std::string, uint32_t> properties;
 };
 
-enum NDFPropertyType {
+enum NDFPropertyType : uint32_t {
   Bool = 0x0,
   UInt8 = 0x1,
   Int32 = 0x2,
@@ -480,9 +480,9 @@ public:
 };
 
 struct NDFPropertyColor : NDFProperty {
-  uint8_t r;
-  uint8_t g;
   uint8_t b;
+  uint8_t g;
+  uint8_t r;
   uint8_t a;
   NDFPropertyColor() {
     property_type = NDFPropertyType::Color;
@@ -506,9 +506,9 @@ struct NDFPropertyColor : NDFProperty {
 private:
   #pragma pack(push, 1)
   struct NDF_Color {
-    uint8_t r;
-    uint8_t g;
     uint8_t b;
+    uint8_t g;
+    uint8_t r;
     uint8_t a;
   };
   #pragma pack(pop)
