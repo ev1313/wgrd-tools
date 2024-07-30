@@ -25,7 +25,7 @@ struct NDFClass {
 
 enum NDFPropertyType {
   Bool = 0x0,
-  Int8 = 0x1,
+  UInt8 = 0x1,
   Int32 = 0x2,
   UInt32 = 0x3,
   Float32 = 0x5,
@@ -43,8 +43,8 @@ enum NDFPropertyType {
   Map = 0x12,
   Long = 0x13,
   Blob = 0x14,
-  S16 = 0x18,
-  U16 = 0x19,
+  Int16 = 0x18,
+  UInt16 = 0x19,
   NDFGUID = 0x1A,
   PathReference = 0x1C,
   LocalisationHash = 0x1D,
@@ -123,10 +123,10 @@ public:
   }
 };
 
-struct NDFPropertyInt8 : NDFProperty {
+struct NDFPropertyUInt8 : NDFProperty {
   uint8_t value;
-  NDFPropertyInt8() {
-    property_type = NDFPropertyType::Int8;
+  NDFPropertyUInt8() {
+    property_type = NDFPropertyType::UInt8;
   }
   void to_ndf_xml(pugi::xml_node& node) override {
     auto int8_node = node.append_child(property_name.c_str());
@@ -140,24 +140,24 @@ struct NDFPropertyInt8 : NDFProperty {
   }
 private:
   #pragma pack(push, 1)
-  struct NDF_Int8 {
+  struct NDF_UInt8 {
     uint8_t value;
   };
   #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
-    NDF_Int8 ndf_int8;
-    stream.read(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_Int8));
+    NDF_UInt8 ndf_int8;
+    stream.read(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_UInt8));
     value = ndf_int8.value;
   }
   void to_ndfbin(NDF*, std::ostream& stream) override {
-    NDF_Int8 ndf_int8;
+    NDF_UInt8 ndf_int8;
     ndf_int8.value = value;
-    stream.write(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_Int8));
+    stream.write(reinterpret_cast<char*>(&ndf_int8), sizeof(NDF_UInt8));
   }
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyInt8>(*this);
+    return std::make_unique<NDFPropertyUInt8>(*this);
   }
 };
 
@@ -747,10 +747,10 @@ public:
   }
 };
 
-struct NDFPropertyS16 : NDFProperty {
+struct NDFPropertyInt16 : NDFProperty {
   int16_t value;
-  NDFPropertyS16() {
-    property_type = NDFPropertyType::S16;
+  NDFPropertyInt16() {
+    property_type = NDFPropertyType::Int16;
   }
   void to_ndf_xml(pugi::xml_node& node) override {
     auto s16_node = node.append_child(property_name.c_str());
@@ -764,31 +764,31 @@ struct NDFPropertyS16 : NDFProperty {
   }
 private:
   #pragma pack(push, 1)
-  struct NDF_S16 {
+  struct NDF_Int16 {
     int16_t value;
   };
   #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
-    NDF_S16 ndf_s16;
-    stream.read(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_S16));
+    NDF_Int16 ndf_s16;
+    stream.read(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_Int16));
     value = ndf_s16.value;
   }
   void to_ndfbin(NDF*, std::ostream& stream) override {
-    NDF_S16 ndf_s16;
+    NDF_Int16 ndf_s16;
     ndf_s16.value = value;
-    stream.write(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_S16));
+    stream.write(reinterpret_cast<char*>(&ndf_s16), sizeof(NDF_Int16));
   }
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyS16>(*this);
+    return std::make_unique<NDFPropertyInt16>(*this);
   }
 };
 
-struct NDFPropertyU16 : NDFProperty {
+struct NDFPropertyUInt16 : NDFProperty {
   uint16_t value;
-  NDFPropertyU16() {
-    property_type = NDFPropertyType::U16;
+  NDFPropertyUInt16() {
+    property_type = NDFPropertyType::UInt16;
   }
   void to_ndf_xml(pugi::xml_node& node) override {
     auto u16_node = node.append_child(property_name.c_str());
@@ -802,24 +802,24 @@ struct NDFPropertyU16 : NDFProperty {
   }
 private:
   #pragma pack(push, 1)
-  struct NDF_U16 {
+  struct NDF_UInt16 {
     uint16_t value;
   };
   #pragma pack(pop)
 public:
   void from_ndfbin(NDF*, std::istream& stream) override {
-    NDF_U16 ndf_u16;
-    stream.read(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_U16));
+    NDF_UInt16 ndf_u16;
+    stream.read(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_UInt16));
     value = ndf_u16.value;
   }
   void to_ndfbin(NDF*, std::ostream& stream) override {
-    NDF_U16 ndf_u16;
+    NDF_UInt16 ndf_u16;
     ndf_u16.value = value;
-    stream.write(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_U16));
+    stream.write(reinterpret_cast<char*>(&ndf_u16), sizeof(NDF_UInt16));
   }
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyU16>(*this);
+    return std::make_unique<NDFPropertyUInt16>(*this);
   }
 };
 

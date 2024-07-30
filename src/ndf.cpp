@@ -6,7 +6,7 @@ std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndftype(uint32_t ndf
       return std::make_unique<NDFPropertyBool>();
     }
     case 0x1: {
-      return std::make_unique<NDFPropertyInt8>();
+      return std::make_unique<NDFPropertyUInt8>();
     }
     case 0x2: {
       return std::make_unique<NDFPropertyInt32>();
@@ -45,10 +45,10 @@ std::unique_ptr<NDFProperty> NDFProperty::get_property_from_ndftype(uint32_t ndf
       return std::make_unique<NDFPropertyMap>();
     }
     case 0x18: {
-      return std::make_unique<NDFPropertyS16>();
+      return std::make_unique<NDFPropertyInt16>();
     }
     case 0x19: {
-      return std::make_unique<NDFPropertyU16>();
+      return std::make_unique<NDFPropertyUInt16>();
     }
     case 0x1A: {
       return std::make_unique<NDFPropertyGUID>();
