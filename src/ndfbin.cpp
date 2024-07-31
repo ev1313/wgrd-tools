@@ -538,6 +538,7 @@ void NDF::save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen
 }
 
 void NDF::save_as_ndfbin(fs::path path) {
+  fs::create_directories(path.parent_path());
   std::fstream ofs(path, std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
   if (!ofs.is_open()) {
     throw std::runtime_error("Failed to open file " + path.string());

@@ -122,6 +122,7 @@ void NDF::save_as_ndf_xml(fs::path path) {
     }
   }
 
+  fs::create_directories(path.parent_path());
   doc.save_file(path.c_str());
 }
 
