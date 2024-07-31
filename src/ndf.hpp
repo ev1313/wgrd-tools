@@ -1318,7 +1318,9 @@ public:
     return get_or_add_expr_indices(vec, object_idx);
   }
 
+  void load_from_ndfbin_stream(std::istream& stream);
   void load_from_ndfbin(fs::path path);
+  void save_as_ndfbin_stream(std::ostream& stream);
   void save_as_ndfbin(fs::path);
 
   void clear() {

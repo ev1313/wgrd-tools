@@ -212,11 +212,14 @@ struct NDF_Type {
 #pragma pack(pop)
 
 void NDF::load_from_ndfbin(fs::path path) {
-  std::ifstream file(path, std::ios::binary);
+  std::ifstream file(path, std::ios::binary | std::ios::in);
   if (!file.is_open()) {
     throw std::runtime_error("Failed to open file");
   }
+  load_from_ndfbin_stream(file);
+}
 
+void NDF::load_from_ndfbin_stream(std::istream& file) {
   NDFBinHeader header;
   file.read(reinterpret_cast<char*>(&header), sizeof(header));
 
@@ -534,7 +537,15 @@ void NDF::save_ndfbin_imprs(const std::map<std::vector<uint32_t>, uint32_t>& gen
   }
 }
 
-void NDF::save_as_ndfbin(fs::path output) {
+void NDF::save_as_ndfbin(fs::path path) {
+  std::fstream ofs(path, std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
+  if (!ofs.is_open()) {
+    throw std::runtime_error("Failed to open file " + path.string());
+  }
+  save_as_ndfbin_stream(ofs);
+}
+
+void NDF::save_as_ndfbin_stream(std::ostream& ofs) {
   gen_object_items.clear();
   gen_object_table.clear();
   gen_string_items.clear();
@@ -554,8 +565,6 @@ void NDF::save_as_ndfbin(fs::path output) {
 
   NDFBinHeader header;
   TOCTable toc_table;
-
-  std::fstream ofs(output, std::fstream::in | std::fstream::out | std::fstream::binary | std::fstream::trunc);
 
   ofs.write(reinterpret_cast<char*>(&header), sizeof(header));
 
