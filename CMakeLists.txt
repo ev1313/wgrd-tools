@@ -19,7 +19,6 @@ set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 add_subdirectory(deps/argparse)
 add_subdirectory(deps/spdlog)
 add_subdirectory(deps/fmt)
-add_subdirectory(deps/Catch2)
 add_subdirectory(deps/pugixml)
 add_subdirectory(deps/ordered-map)
 
