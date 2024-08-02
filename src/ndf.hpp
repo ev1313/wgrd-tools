@@ -702,7 +702,7 @@ public:
 struct NDFPropertyMap : NDFProperty {
   std::vector<std::pair<std::unique_ptr<NDFProperty>, std::unique_ptr<NDFProperty>>> values;
   NDFPropertyMap() {
-    property_type = 0x12;
+    property_type = NDFPropertyType::Map;
   }
   void to_ndf_xml(pugi::xml_node& node) override {
     auto map_node = node.append_child(property_name.c_str());
