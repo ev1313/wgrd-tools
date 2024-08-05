@@ -694,6 +694,9 @@ public:
     auto ret = std::make_unique<NDFPropertyList>();
     for(auto const &value : values) {
       ret->values.push_back(value->get_copy());
+      ret->property_name = property_name;
+      ret->property_idx = property_idx;
+      ret->property_type = property_type;
     }
     return ret;
   }
@@ -743,6 +746,9 @@ public:
     for(auto const &[key, value] : values) {
       ret->values.push_back({key->get_copy(), value->get_copy()});
     }
+    ret->property_name = property_name;
+    ret->property_idx = property_idx;
+    ret->property_type = property_type;
     return ret;
   }
 };
@@ -1061,6 +1067,9 @@ public:
     auto ret = std::make_unique<NDFPropertyPair>();
     ret->first = first->get_copy();
     ret->second = second->get_copy();
+    ret->property_name = property_name;
+    ret->property_idx = property_idx;
+    ret->property_type = property_type;
     return ret;
   }
 };
