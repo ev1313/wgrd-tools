@@ -1127,6 +1127,7 @@ public:
     ret.is_top_object = is_top_object;
     ret.export_path = export_path;
     for(auto const &prop : properties) {
+      ret.property_map.insert({prop->property_name, ret.properties.size()});
       ret.properties.push_back(prop->get_copy());
     }
     return ret;
