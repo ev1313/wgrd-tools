@@ -1141,6 +1141,10 @@ public:
     }
     return ret;
   }
+  void add_property(std::unique_ptr<NDFProperty> property) {
+    property_map.insert({property->property_name, properties.size()});
+    properties.push_back(std::move(property));
+  }
 };
 
 struct NDF {
@@ -1158,6 +1162,10 @@ public:
   void load_imprs(std::istream &stream, std::vector<std::string> current_import_path);
   void load_exprs(std::istream &stream, std::vector<std::string> current_export_path);
   void load_from_ndf_xml(fs::path path);
+
+  void add_object(NDFObject object) {
+    object_map.insert({object.name, std::move(object)});
+  }
 private:
   std::vector<std::string> gen_object_items;
   std::map<std::string, uint32_t> gen_object_table;

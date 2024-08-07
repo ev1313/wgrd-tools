@@ -143,10 +143,10 @@ void NDF::load_from_ndf_xml(fs::path path) {
       uint32_t ndf_type = prop.attribute("typeId").as_uint();
       std::unique_ptr<NDFProperty> property = NDFProperty::get_property_from_ndf_xml(ndf_type, prop);
       property->from_ndf_xml(prop);
-      object.properties.push_back(std::move(property));
+      object.add_property(std::move(property));
     }
 
-    object_map.insert({object.name, std::move(object)});
+    add_object(std::move(object));
   }
   fill_gen_object();
 }

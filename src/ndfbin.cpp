@@ -337,10 +337,9 @@ void NDF::load_from_ndfbin_stream(std::istream& file) {
       property->from_ndfbin(this, file);
       property->property_name = property_table[prop.propertyIndex].first;
 
-      object.properties.push_back(std::move(property));
-      object.property_map.insert({property_table[prop.propertyIndex].first, object.properties.size() - 1});
+      object.add_property(std::move(property));
     }
-    object_map.insert({object.name, std::move(object)});
+    add_object(std::move(object));
   }
 
   fill_gen_object();
