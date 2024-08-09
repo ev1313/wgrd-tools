@@ -81,7 +81,17 @@ struct NDFProperty {
   virtual bool is_import_reference() {
     return false;
   }
+  virtual bool is_list() {
+    return false;
+  }
+  virtual bool is_map() {
+    return false;
+  }
+  virtual bool is_pair() {
+    return false;
+  }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
+  virtual void fix_references(const std::string& old_name, const std::string& new_name) {}
 };
 
 
@@ -610,6 +620,11 @@ struct NDFPropertyObjectReference : NDFProperty {
   bool is_object_reference() override {
     return true;
   }
+  void fix_references(const std::string& old_name, const std::string& new_name) override {
+    if(object_name == old_name) {
+      object_name = new_name;
+    }
+  }
 private:
   #pragma pack(push, 1)
   struct NDF_ObjectReference {
@@ -680,6 +695,14 @@ struct NDFPropertyList : NDFProperty {
       values.back()->from_ndf_xml(value_node);
     }
   }
+  bool is_list() override {
+    return true;
+  }
+  void fix_references(const std::string& old_name, const std::string& new_name) override {
+    for(auto& value : values) {
+      value->fix_references(old_name, new_name);
+    }
+  }
 private:
   #pragma pack(push, 1)
   struct NDF_List {
@@ -729,6 +752,15 @@ struct NDFPropertyMap : NDFProperty {
       value->from_ndf_xml(value_node);
 
       values.push_back({std::move(key), std::move(value)});
+    }
+  }
+  bool is_map() override {
+    return true;
+  }
+  void fix_references(const std::string& old_name, const std::string& new_name) override {
+    for(auto const &[key, value] : values) {
+      key->fix_references(old_name, new_name);
+      value->fix_references(old_name, new_name);
     }
   }
 private:
@@ -1059,6 +1091,13 @@ struct NDFPropertyPair : NDFProperty {
     second = get_property_from_ndf_xml(second_node.attribute("typeId").as_uint(), second_node);
     second->from_ndf_xml(second_node);
   }
+  bool is_pair() override {
+    return true;
+  }
+  void fix_references(const std::string& old_name, const std::string& new_name) override {
+    first->fix_references(old_name, new_name);
+    second->fix_references(old_name, new_name);
+  }
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
@@ -1144,6 +1183,13 @@ public:
   void add_property(std::unique_ptr<NDFProperty> property) {
     property_map.insert({property->property_name, properties.size()});
     properties.push_back(std::move(property));
+  }
+  void fix_references(const std::string& old_name, const std::string& new_name) {
+    for(auto& prop : properties) {
+      if(prop->is_list() || prop->is_map() || prop->is_pair() || prop->is_object_reference()) {
+        prop->fix_references(old_name, new_name);
+      }
+    }
   }
 };
 
@@ -1232,7 +1278,7 @@ public:
     return object_map.at(str);
   }
 
-  bool change_object_name(const std::string& previous_name, const std::string& name) {
+  bool change_object_name(const std::string& previous_name, const std::string& name, bool fix_references = true) {
     if(object_map.contains(name)) {
       spdlog::warn("change_object_name: object {} does already exist", name);
       return false;
@@ -1246,6 +1292,12 @@ public:
     object_map[name] = object.get_copy();
     object_map[name].name = name;
     object_map.erase(it);
+
+    if(fix_references) {
+      for(auto it = object_map.begin(); it != object_map.end(); ++it) {
+        it.value().fix_references(previous_name, name);
+      }
+    }
     return true;
   }
 
