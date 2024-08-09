@@ -92,6 +92,7 @@ struct NDFProperty {
   }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
   virtual void fix_references(const std::string& old_name, const std::string& new_name) {}
+  virtual std::string as_string() = 0;
 };
 
 
@@ -131,6 +132,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyBool>(*this);
   }
+  std::string as_string() override {
+    return value ? "true" : "false";
+  }
 };
 
 struct NDFPropertyUInt8 : NDFProperty {
@@ -168,6 +172,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyUInt8>(*this);
+  }
+  std::string as_string() override {
+    return std::to_string(value);
   }
 };
 
@@ -207,6 +214,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyInt32>(*this);
   }
+  std::string as_string() override {
+    return std::to_string(value);
+  }
 };
 
 struct NDFPropertyUInt32 : NDFProperty {
@@ -244,6 +254,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyUInt32>(*this);
+  }
+  std::string as_string() override {
+    return std::to_string(value);
   }
 };
 
@@ -283,6 +296,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyFloat32>(*this);
   }
+  std::string as_string() override {
+    return std::to_string(value);
+  }
 };
 
 struct NDFPropertyFloat64 : NDFProperty {
@@ -321,6 +337,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyFloat64>(*this);
   }
+  std::string as_string() override {
+    return std::to_string(value);
+  }
 };
 
 struct NDFPropertyString : NDFProperty {
@@ -351,6 +370,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyString>(*this);
   }
+  std::string as_string() override {
+    return value;
+  }
 };
 
 struct NDFPropertyWideString : NDFProperty {
@@ -380,6 +402,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyWideString>(*this);
+  }
+  std::string as_string() override {
+    return value;
   }
 };
 
@@ -430,6 +455,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyF32_vec3>(*this);
+  }
+  std::string as_string() override {
+    return fmt::format("({}, {}, {})", x, y, z);
   }
 };
 
@@ -487,6 +515,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyF32_vec4>(*this);
   }
+  std::string as_string() override {
+    return fmt::format("({}, {}, {}, {})", x, y, z, w);
+  }
 };
 
 struct NDFPropertyColor : NDFProperty {
@@ -543,6 +574,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyColor>(*this);
   }
+  std::string as_string() override {
+    return fmt::format("({}, {}, {}, {})", r, g, b, a);
+  }
 };
 
 struct NDFPropertyS32_vec3 : NDFProperty {
@@ -593,6 +627,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyS32_vec3>(*this);
   }
+  std::string as_string() override {
+    return fmt::format("({}, {}, {})", x, y, z);
+  }
 };
 
 enum ReferenceType {
@@ -639,6 +676,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyObjectReference>(*this);
   }
+  std::string as_string() override {
+    return object_name;
+  }
 };
 
 struct NDFPropertyImportReference : NDFProperty {
@@ -673,6 +713,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyImportReference>(*this);
+  }
+  std::string as_string() override {
+    return import_name;
   }
 };
 
@@ -722,6 +765,9 @@ public:
       ret->property_type = property_type;
     }
     return ret;
+  }
+  std::string as_string() override {
+    return "size " + std::to_string(values.size());
   }
 };
 
@@ -783,6 +829,9 @@ public:
     ret->property_type = property_type;
     return ret;
   }
+  std::string as_string() override {
+    return "size " + std::to_string(values.size());
+  }
 };
 
 struct NDFPropertyInt16 : NDFProperty {
@@ -821,6 +870,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyInt16>(*this);
   }
+  std::string as_string() override {
+    return std::to_string(value);
+  }
 };
 
 struct NDFPropertyUInt16 : NDFProperty {
@@ -858,6 +910,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyUInt16>(*this);
+  }
+  std::string as_string() override {
+    return std::to_string(value);
   }
 };
 
@@ -903,6 +958,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyGUID>(*this);
   }
+  std::string as_string() override {
+    return guid;
+  }
 };
 
 struct NDFPropertyPathReference : NDFProperty {
@@ -932,6 +990,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyPathReference>(*this);
+  }
+  std::string as_string() override {
+    return path;
   }
 };
 
@@ -977,6 +1038,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyLocalisationHash>(*this);
   }
+  std::string as_string() override {
+    return hash;
+  }
 };
 
 struct NDFPropertyS32_vec2 : NDFProperty {
@@ -1021,6 +1085,9 @@ public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyS32_vec2>(*this);
   }
+  std::string as_string() override {
+    return fmt::format("({}, {})", x, y);
+  }
 };
 
 struct NDFPropertyF32_vec2 : NDFProperty {
@@ -1064,6 +1131,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyF32_vec2>(*this);
+  }
+  std::string as_string() override {
+    return fmt::format("({}, {})", x, y);
   }
 };
 
@@ -1111,6 +1181,9 @@ public:
     ret->property_type = property_type;
     return ret;
   }
+  std::string as_string() override {
+    return fmt::format("({}, {})", first->as_string(), second->as_string());
+  }
 };
 
 // FIXME: error checking for hashes?
@@ -1154,6 +1227,9 @@ public:
 public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyHash>(*this);
+  }
+  std::string as_string() override {
+    return hash;
   }
 };
 
