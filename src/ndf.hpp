@@ -91,8 +91,9 @@ struct NDFProperty {
     return false;
   }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
-  virtual void fix_references(const std::string& old_name, const std::string& new_name) {}
+  virtual void fix_references(const std::string&, const std::string&) {}
   virtual std::string as_string() = 0;
+  virtual std::set<std::string> get_object_references() { return {}; }
 };
 
 
@@ -662,6 +663,9 @@ struct NDFPropertyObjectReference : NDFProperty {
       object_name = new_name;
     }
   }
+  std::set<std::string> get_object_references() override {
+    return {object_name};
+  }
 private:
   #pragma pack(push, 1)
   struct NDF_ObjectReference {
@@ -746,6 +750,14 @@ struct NDFPropertyList : NDFProperty {
       value->fix_references(old_name, new_name);
     }
   }
+  std::set<std::string> get_object_references() override {
+    std::set<std::string> ret;
+    for(auto const &value : values) {
+      auto value_refs = value->get_object_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
+  }
 private:
   #pragma pack(push, 1)
   struct NDF_List {
@@ -808,6 +820,16 @@ struct NDFPropertyMap : NDFProperty {
       key->fix_references(old_name, new_name);
       value->fix_references(old_name, new_name);
     }
+  }
+  std::set<std::string> get_object_references() override {
+    std::set<std::string> ret;
+    for(auto const &[key, value] : values) {
+      auto key_refs = key->get_object_references();
+      ret.insert(key_refs.begin(), key_refs.end());
+      auto value_refs = value->get_object_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
   }
 private:
   #pragma pack(push, 1)
@@ -1168,6 +1190,14 @@ struct NDFPropertyPair : NDFProperty {
     first->fix_references(old_name, new_name);
     second->fix_references(old_name, new_name);
   }
+  std::set<std::string> get_object_references() override {
+    std::set<std::string> ret;
+    auto first_refs = first->get_object_references();
+    ret.insert(first_refs.begin(), first_refs.end());
+    auto second_refs = second->get_object_references();
+    ret.insert(second_refs.begin(), second_refs.end());
+    return ret;
+  }
 public:
   void from_ndfbin(NDF*, std::istream&) override;
   void to_ndfbin(NDF*, std::ostream&) override;
@@ -1266,6 +1296,14 @@ public:
         prop->fix_references(old_name, new_name);
       }
     }
+  }
+  std::set<std::string> get_object_references() {
+    std::set<std::string> ret;
+    for(auto const &prop : properties) {
+      auto refs = prop->get_object_references();
+      ret.insert(refs.begin(), refs.end());
+    }
+    return ret;
   }
 };
 
