@@ -92,6 +92,7 @@ struct NDFProperty {
   }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
   virtual void fix_references(const std::string&, const std::string&) {}
+  virtual void fix_references(const std::unordered_map<std::string, std::string>& renames) {}
   virtual std::string as_string() = 0;
   virtual std::set<std::string> get_object_references() { return {}; }
 };
@@ -663,6 +664,11 @@ struct NDFPropertyObjectReference : NDFProperty {
       object_name = new_name;
     }
   }
+  void fix_references(const std::unordered_map<std::string, std::string>& renames) override {
+    if(renames.contains(object_name)) {
+      object_name = renames.at(object_name);
+    }
+  }
   std::set<std::string> get_object_references() override {
     return {object_name};
   }
@@ -750,6 +756,11 @@ struct NDFPropertyList : NDFProperty {
       value->fix_references(old_name, new_name);
     }
   }
+  void fix_references(const std::unordered_map<std::string, std::string>& renames) override {
+    for(auto& value : values) {
+      value->fix_references(renames);
+    }
+  }
   std::set<std::string> get_object_references() override {
     std::set<std::string> ret;
     for(auto const &value : values) {
@@ -819,6 +830,12 @@ struct NDFPropertyMap : NDFProperty {
     for(auto const &[key, value] : values) {
       key->fix_references(old_name, new_name);
       value->fix_references(old_name, new_name);
+    }
+  }
+  void fix_references(const std::unordered_map<std::string, std::string>& renames) override {
+    for(auto const &[key, value] : values) {
+      key->fix_references(renames);
+      value->fix_references(renames);
     }
   }
   std::set<std::string> get_object_references() override {
@@ -1190,6 +1207,10 @@ struct NDFPropertyPair : NDFProperty {
     first->fix_references(old_name, new_name);
     second->fix_references(old_name, new_name);
   }
+  void fix_references(const std::unordered_map<std::string, std::string>& renames) override {
+    first->fix_references(renames);
+    second->fix_references(renames);
+  }
   std::set<std::string> get_object_references() override {
     std::set<std::string> ret;
     auto first_refs = first->get_object_references();
@@ -1294,6 +1315,13 @@ public:
     for(auto& prop : properties) {
       if(prop->is_list() || prop->is_map() || prop->is_pair() || prop->is_object_reference()) {
         prop->fix_references(old_name, new_name);
+      }
+    }
+  }
+  void fix_references(const std::unordered_map<std::string, std::string>& renames) {
+    for(auto& prop : properties) {
+      if(prop->is_list() || prop->is_map() || prop->is_pair() || prop->is_object_reference()) {
+        prop->fix_references(renames);
       }
     }
   }
@@ -1412,6 +1440,33 @@ public:
         it.value().fix_references(previous_name, name);
       }
     }
+    return true;
+  }
+
+  bool bulk_rename_objects(const std::unordered_map<std::string, std::string>& renames, bool fix_references = true)
+  {
+    for(const auto& [previous_name, name] : renames) {
+      if(object_map.contains(name)) {
+        spdlog::warn("change_object_name: object {} does already exist", name);
+        return false;
+      }
+      if(!object_map.contains(previous_name)) {
+        spdlog::warn("change_object_name: object {} does not exist", previous_name);
+        return false;
+      }
+      auto& object = get_object(previous_name);
+      const auto it = object_map.find(previous_name);
+      object_map[name] = object.get_copy();
+      object_map[name].name = name;
+      object_map.erase(it);
+    }
+
+    if(fix_references) {
+      for(auto it = object_map.begin(); it != object_map.end(); ++it) {
+        it.value().fix_references(renames);
+      }
+    }
+
     return true;
   }
 
