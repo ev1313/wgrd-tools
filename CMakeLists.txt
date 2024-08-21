@@ -36,9 +36,23 @@ else ()
   set(VERSION_GIT_TAG "unknown")
 endif ()
 
-add_library(ndf src/ndf.cpp src/ndfbin.cpp)
-target_link_libraries(ndf PUBLIC argparse::argparse spdlog::spdlog fmt::fmt pugixml::pugixml fmt::fmt tsl::ordered_map)
-target_include_directories(ndf PUBLIC .)
+add_library(ndf STATIC
+    src/ndf.cpp
+    src/ndfbin.cpp
+)
+target_link_libraries(ndf
+    PUBLIC
+    argparse::argparse
+    spdlog::spdlog
+    fmt::fmt
+    pugixml::pugixml
+    fmt::fmt
+    tsl::ordered_map)
+target_include_directories(ndf
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/
+)
 
 add_executable(ndfbin_helper
         src/ndfbin_helper.cpp
@@ -54,4 +68,3 @@ target_link_libraries(ndfbin_helper PRIVATE -static ndf)
 #        src/edat_helper.cpp
 #)
 #target_link_libraries(edat_helper PRIVATE etceterapp)
-
