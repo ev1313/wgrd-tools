@@ -1,6 +1,24 @@
 #include "ndf.hpp"
 #include "utf.hpp"
 
+std::unique_ptr<NDFProperty>
+NDFProperty::get_property_from_ndfbin(uint32_t ndf_type, std::istream &stream) {
+  spdlog::debug("NDFType: {} @0x{:02X}", ndf_type, (uint32_t)stream.tellg());
+  if (ndf_type == 0x9) {
+    uint32_t reference_type;
+    stream.read(reinterpret_cast<char *>(&reference_type), sizeof(uint32_t));
+    if (reference_type == ReferenceType::Object) {
+      return std::make_unique<NDFPropertyObjectReference>();
+    } else if (reference_type == ReferenceType::Import) {
+      return std::make_unique<NDFPropertyImportReference>();
+    } else {
+      throw std::runtime_error(
+          std::format("Unknown ReferenceType: {}", reference_type));
+    }
+  }
+  return get_property_from_ndftype(ndf_type);
+}
+
 #pragma pack(push, 1)
 struct NDF_Bool {
   uint8_t value;
