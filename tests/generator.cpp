@@ -1,23 +1,19 @@
 // test data generator for modding suite,
 // creates dat files with some random ndfbin data
 // and their corresponding xml files
+#include "generator.hpp"
 
 #include <argparse/argparse.hpp>
 
 #include <experimental/random>
 #include <stdint.h>
 
-#include "ndf.hpp"
-
 #include <pybind11/embed.h>
 namespace py = pybind11;
 
-#include <filesystem>
-namespace fs = std::filesystem;
-
 #include "pugixml.hpp"
 
-void add_random_object(NDF &ndf) {
+void ndf_generator::add_random_object(NDF &ndf) {
   NDFObject obj;
   obj.name = "test_object";
   obj.class_name = "TTestClass";
@@ -27,7 +23,7 @@ void add_random_object(NDF &ndf) {
   ndf.add_object(std::move(obj));
 }
 
-void add_random_uint8(NDFObject &obj) {
+void ndf_generator::add_random_uint8(NDFObject &obj) {
   auto prop = std::make_unique<NDFPropertyUInt8>();
   prop->property_idx = obj.properties.size();
   prop->property_type = NDFPropertyType::UInt8;
@@ -36,7 +32,7 @@ void add_random_uint8(NDFObject &obj) {
   obj.properties.push_back(std::move(prop));
 }
 
-void add_random_uint16(NDFObject &obj) {
+void ndf_generator::add_random_uint16(NDFObject &obj) {
   auto prop = std::make_unique<NDFPropertyUInt16>();
   prop->property_idx = obj.properties.size();
   prop->property_type = NDFPropertyType::UInt16;
@@ -45,7 +41,7 @@ void add_random_uint16(NDFObject &obj) {
   obj.properties.push_back(std::move(prop));
 }
 
-void add_random_uint32(NDFObject &obj) {
+void ndf_generator::add_random_uint32(NDFObject &obj) {
   auto prop = std::make_unique<NDFPropertyUInt32>();
   prop->property_idx = obj.properties.size();
   prop->property_type = NDFPropertyType::UInt32;
@@ -55,8 +51,9 @@ void add_random_uint32(NDFObject &obj) {
 }
 
 // call with vfs_path -> path to the file
-void create_edat(fs::path path,
-                 std::unordered_map<std::string, std::string> files) {
+void ndf_generator::create_edat(
+    fs::path path, std::unordered_map<std::string, std::string> files) {
+  fs::path out_path = path.parent_path() / "out";
   // first we create the xml file for the edat
   pugi::xml_document doc;
   auto root = doc.append_child("EDat");
@@ -64,17 +61,20 @@ void create_edat(fs::path path,
   root.append_attribute("_wgrd_cons_parsers_version") = "0.2.11";
   for (auto &[vfs_path, _] : files) {
     auto file = root.append_child("File");
-    file.append_attribute("path") = vfs_path.c_str();
+    std::string p = ("out" / fs::path(vfs_path));
+    std::replace(p.begin(), p.end(), '/', '\\');
+    file.append_attribute("path") = p.c_str();
   }
   fs::path xml_path = path;
   xml_path = xml_path.replace_extension("edat.xml");
   doc.save_file(xml_path.string().c_str());
 
   // now we create the out folder and copy the files in there
-  fs::path out_path = path.parent_path();
-  fs::create_directories(out_path / "out");
+  fs::create_directories(out_path);
   for (auto &[vfs_path, fs_path] : files) {
-    fs::copy(fs_path, out_path / "out" / vfs_path,
+    spdlog::info("copying file {} to {}", fs_path,
+                 (out_path / vfs_path).string());
+    fs::copy(fs_path, out_path / vfs_path,
              fs::copy_options::overwrite_existing);
   }
 
@@ -94,31 +94,13 @@ void create_edat(fs::path path,
   edat.attr("pack")(xml_path.string(), out_path.string(), data);
 }
 
-int main(int argc, char *argv[]) {
-  argparse::ArgumentParser program;
-  program.add_argument("-o").help(gettext("Path to output folder"));
-
-  try {
-    program.parse_args(argc, argv);
-  } catch (const std::runtime_error &err) {
-    std::cout << err.what() << std::endl;
-    std::cout << program;
-    exit(0);
-  }
-  py::scoped_interpreter guard{};
-
+void ndf_generator::create_test_files(fs::path output_folder) {
   py::str py_exec = (py::module::import("sys").attr("executable"));
   spdlog::info(std::string(py_exec));
   py::str py_path = (py::module::import("sys").attr("path"));
   spdlog::info(std::string(py_path));
 
   std::srand(std::time(nullptr));
-  fs::path output_folder;
-  if (program.present("-o")) {
-    output_folder = program.get<std::string>("-o");
-  } else {
-    output_folder = fs::temp_directory_path() / "modding_suite_test_data";
-  }
 
   fs::create_directories(output_folder / "ndfbin");
 
@@ -138,5 +120,30 @@ int main(int argc, char *argv[]) {
 
   // now generate an edat file containing the ndfbin file
   create_edat(output_folder / "test.dat",
-              {{"test", output_folder / "ndfbin" / "test.ndfbin"}});
+              {{"test.ndfbin", output_folder / "ndfbin" / "test.ndfbin"}});
 }
+
+/*
+int main(int argc, char *argv[]) {
+  argparse::ArgumentParser program;
+  program.add_argument("-o").help(gettext("Path to output folder"));
+
+  try {
+    program.parse_args(argc, argv);
+  } catch (const std::runtime_error &err) {
+    std::cout << err.what() << std::endl;
+    std::cout << program;
+    exit(0);
+  }
+  py::scoped_interpreter guard{};
+
+  fs::path output_folder;
+  if (program.present("-o")) {
+    output_folder = program.get<std::string>("-o");
+  } else {
+    output_folder = fs::temp_directory_path() / "modding_suite_test_data";
+  }
+
+  create_test_files(output_folder);
+}
+*/

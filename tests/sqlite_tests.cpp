@@ -7,8 +7,9 @@ TEST_CASE("test sqlite bind") {
   auto rc = sqlite3_open(":memory:", &db);
   REQUIRE(rc == SQLITE_OK);
 
-  auto create_stmt = SQLStatement<0, 0>(db,
-                                        R"rstr( CREATE TABLE test1(
+  SQLStatement<0, 0> create_stmt;
+  create_stmt.init(db,
+                   R"rstr( CREATE TABLE test1(
                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                                     value TEXT
                                     ); )rstr"
@@ -16,12 +17,13 @@ TEST_CASE("test sqlite bind") {
   );
   REQUIRE(create_stmt.execute());
 
-  auto insert_stmt = SQLStatement<1, 0>(
-      db, R"rstr( INSERT INTO test1 (value) VALUES (?) )rstr");
+  SQLStatement<1, 0> insert_stmt;
+  insert_stmt.init(db, R"rstr( INSERT INTO test1 (value) VALUES (?) )rstr");
   REQUIRE(insert_stmt.insert(std::string("test")) == 1);
   REQUIRE(insert_stmt.insert(std::string("test2")) == 2);
 
-  auto get_stmt = SQLStatement<0, 2>(db, R"rstr( SELECT * FROM test1; )rstr");
+  SQLStatement<0, 2> get_stmt;
+  get_stmt.init(db, R"rstr( SELECT * FROM test1; )rstr");
   auto items_opt = get_stmt.query<std::tuple<int, std::string>>();
   REQUIRE(items_opt.has_value());
   auto items = items_opt.value();

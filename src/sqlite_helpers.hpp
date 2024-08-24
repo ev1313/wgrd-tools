@@ -4,23 +4,30 @@
 #include <spdlog/spdlog.h>
 #include <utility>
 
+// add this type to your input parameter list to bind a NULL value
 struct SQLNULL {};
 
 template <int BindCount = -1, int ColumnCount = -1> class SQLStatement {
 private:
-  sqlite3_stmt *stmt;
+  sqlite3_stmt *stmt = nullptr;
 
   int m_index = 1;
 
 public:
-  SQLStatement(sqlite3 *db, const char *query) {
+  ~SQLStatement() {
+    if (!stmt) {
+      return;
+    }
+    sqlite3_finalize(stmt);
+  }
+  bool init(sqlite3 *db, const char *query) {
     int rc = sqlite3_prepare_v2(db, query, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
       spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
-      throw std::runtime_error("Failed to prepare statement");
+      return false;
     }
+    return true;
   }
-  ~SQLStatement() { sqlite3_finalize(stmt); }
 
 private:
   bool reset() {

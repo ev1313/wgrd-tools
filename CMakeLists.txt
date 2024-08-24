@@ -43,6 +43,8 @@ add_library(ndf STATIC
     src/ndfbin.cpp
     src/ndf_bin_properties.cpp
     src/ndf_xml_properties.cpp
+    src/ndf_db.hpp
+    src/ndf_db.cpp
     src/sqlite_helpers.hpp
 )
 target_link_libraries(ndf
@@ -84,11 +86,15 @@ if(${BUILD_TESTS})
     )
 
     add_executable(tests
+        tests/generator.cpp
         tests/sqlite_tests.cpp
+        tests/ndf_db_tests.cpp
     )
     target_link_libraries(tests
         PUBLIC
         Catch2::Catch2WithMain
+        Python3::Python
+        pybind11::pybind11
         ndf
     )
 endif()
