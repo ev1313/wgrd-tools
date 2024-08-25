@@ -95,6 +95,22 @@ void ndf_generator::add_object_reference(NDFObject &obj, std::string ref) {
   obj.properties.push_back(std::move(prop));
 }
 
+std::unique_ptr<NDFProperty>
+ndf_generator::gen_import_reference(int idx, std::string ref) {
+  auto prop = std::make_unique<NDFPropertyImportReference>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::ImportReference;
+  prop->property_name = std::format("ObjRef_{}", prop->property_idx);
+
+  prop->import_name = ref;
+  return prop;
+}
+
+void ndf_generator::add_import_reference(NDFObject &obj, std::string ref) {
+  auto prop = gen_import_reference(obj.properties.size(), ref);
+  obj.properties.push_back(std::move(prop));
+}
+
 // call with vfs_path -> path to the file
 void ndf_generator::create_edat(
     fs::path path, std::unordered_map<std::string, std::string> files) {

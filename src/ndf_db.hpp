@@ -41,7 +41,10 @@ private:
   SQLStatement<1, 0> stmt_insert_ndf_localisation_hash;
   SQLStatement<1, 0> stmt_insert_ndf_hash;
   // accessors for objects
+  SQLStatement<1, 1> stmt_get_object_ndf_id;
+  SQLStatement<1, 1> stmt_get_object_name;
   SQLStatement<1, 1> stmt_get_object_names;
+  SQLStatement<1, 1> stmt_get_object_export_path;
   SQLStatement<1, 5> stmt_get_object;
   SQLStatement<1, 1> stmt_get_object_properties;
   SQLStatement<1, 1> stmt_get_property_names;
@@ -101,9 +104,10 @@ private:
   SQLStatement<1, 1> stmt_set_localisation_hash_value;
   SQLStatement<1, 1> stmt_set_hash_value;
   // object update statements
-  SQLStatement<0, 2> stmt_set_object_name;
-  SQLStatement<0, 3> stmt_update_object_reference;
-  SQLStatement<0, 2> stmt_update_import_reference;
+  SQLStatement<2, 0> stmt_set_object_name;
+  SQLStatement<2, 0> stmt_set_object_export_path;
+  SQLStatement<3, 0> stmt_update_object_reference;
+  SQLStatement<2, 0> stmt_update_import_reference;
 
   bool init_statements();
 
@@ -151,4 +155,5 @@ public:
   std::optional<std::unique_ptr<NDFProperty>> get_property(int property_idx);
 
   bool change_object_name(int object_idx, std::string new_name);
+  bool change_export_path(int object_idx, std::string new_path);
 };

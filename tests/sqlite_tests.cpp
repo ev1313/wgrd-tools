@@ -2,7 +2,7 @@
 
 #include "sqlite_helpers.hpp"
 
-TEST_CASE("test sqlite bind") {
+TEST_CASE("test sqlite bind", "[sqlite]") {
   sqlite3 *db;
   auto rc = sqlite3_open(":memory:", &db);
   REQUIRE(rc == SQLITE_OK);

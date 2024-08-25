@@ -243,8 +243,14 @@ bool NDF_DB::init_statements() {
       db, R"rstr( INSERT INTO ndf_hash (value) VALUES (?); )rstr");
 
   // accessors
+  stmt_get_object_ndf_id.init(
+      db, R"rstr( SELECT ndf_id FROM ndf_object WHERE id=?; )rstr");
+  stmt_get_object_name.init(
+      db, R"rstr( SELECT object_name FROM ndf_object WHERE id=?; )rstr");
   stmt_get_object_names.init(
       db, R"rstr( SELECT object_name FROM ndf_object WHERE ndf_id=?; )rstr");
+  stmt_get_object_export_path.init(
+      db, R"rstr( SELECT export_path FROM ndf_object WHERE id=?; )rstr");
   stmt_get_object.init(
       db,
       R"rstr( SELECT ndf_id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE id=?; )rstr");
@@ -376,8 +382,9 @@ bool NDF_DB::init_statements() {
       db, R"rstr( UPDATE ndf_hash SET value=? WHERE id=?; )rstr");
   // object updates
   stmt_set_object_name.init(
-      db,
-      R"rstr( UPDATE ndf_object SET object_name=? WHERE object_name=?; )rstr");
+      db, R"rstr( UPDATE ndf_object SET object_name=? WHERE id=?; )rstr");
+  stmt_set_object_export_path.init(
+      db, R"rstr( UPDATE ndf_object SET export_path=? WHERE id=?; )rstr");
   stmt_update_object_reference.init(db,
                                     R"rstr( UPDATE ndf_object_reference
                                             SET value=? WHERE value=? AND
@@ -490,7 +497,44 @@ NDF_DB::get_property(int property_id) {
 }
 
 bool NDF_DB::change_object_name(int object_id, std::string new_name) {
+  auto ndf_id_opt = stmt_get_object_ndf_id.query_single<int>(object_id);
+  if (!ndf_id_opt.has_value()) {
+    spdlog::error("Didn't find object {}", object_id);
+    return false;
+  }
+  auto old_obj_name_opt =
+      stmt_get_object_name.query_single<std::string>(object_id);
+  if (!old_obj_name_opt.has_value()) {
+    spdlog::error("Didn't find object {}", object_id);
+    return false;
+  }
   // first update to the new name
+  if (!stmt_set_object_name.execute(new_name, object_id)) {
+    return false;
+  }
   // now update all references to this object
-  return false;
+  if (!stmt_update_object_reference.execute(new_name, old_obj_name_opt.value(),
+                                            ndf_id_opt.value())) {
+    return false;
+  }
+  return true;
+}
+
+bool NDF_DB::change_export_path(int object_id, std::string new_path) {
+  auto old_export_path_opt =
+      stmt_get_object_export_path.query_single<std::string>(object_id);
+  if (!old_export_path_opt.has_value()) {
+    spdlog::error("Didn't find object {}", object_id);
+    return false;
+  }
+  // first update to the new name
+  if (!stmt_set_object_export_path.execute(new_path, object_id)) {
+    return false;
+  }
+  // now update all references to this object
+  if (!stmt_update_import_reference.execute(new_path,
+                                            old_export_path_opt.value())) {
+    return false;
+  }
+  return true;
 }

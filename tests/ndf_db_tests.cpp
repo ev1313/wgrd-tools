@@ -152,71 +152,116 @@ bool check_object_equality(NDFObject *obj1, NDFObject *obj2) {
   return true;
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test ndf properties -> DB") {
-  NDF_DB db;
-  db.init();
-  // create test file
-  auto ndf_file_id_opt =
-      db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
-  REQUIRE(ndf_file_id_opt.has_value());
-  auto ndf_file_id = ndf_file_id_opt.value();
+TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
+  SECTION("test adding and reading an object") {
+    NDF_DB db;
+    db.init();
+    // create test file
+    auto ndf_file_id_opt =
+        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
+    REQUIRE(ndf_file_id_opt.has_value());
+    auto ndf_file_id = ndf_file_id_opt.value();
 
-  // create test object into the test file
-  auto obj1 = ndf_generator::gen_random_object();
-  // add properties to test object
-  ndf_generator::add_random_uint8(obj1);
-  ndf_generator::add_random_uint16(obj1);
-  ndf_generator::add_random_uint32(obj1);
-  ndf_generator::add_random_list(obj1);
-  ndf_generator::add_object_reference(obj1, "test_object");
+    // create test object into the test file
+    auto obj1 = ndf_generator::gen_random_object();
+    // add properties to test object
+    ndf_generator::add_random_uint8(obj1);
+    ndf_generator::add_random_uint16(obj1);
+    ndf_generator::add_random_uint32(obj1);
+    ndf_generator::add_random_list(obj1);
+    ndf_generator::add_object_reference(obj1, "test_object");
 
-  // insert into DB
-  auto obj_id_opt = db.insert_object(ndf_file_id, obj1);
-  REQUIRE(obj_id_opt.has_value());
-  auto obj_id = obj_id_opt.value();
+    // insert into DB
+    auto obj_id_opt = db.insert_object(ndf_file_id, obj1);
+    REQUIRE(obj_id_opt.has_value());
+    auto obj_id = obj_id_opt.value();
 
-  // now check the DB contains the correct values
-  auto db_obj = db.get_object(obj_id);
-  REQUIRE(db_obj.has_value());
-  REQUIRE(check_object_equality(&obj1, &db_obj.value()));
-}
+    // now check the DB contains the correct values
+    auto db_obj = db.get_object(obj_id);
+    REQUIRE(db_obj.has_value());
+    REQUIRE(check_object_equality(&obj1, &db_obj.value()));
+  }
 
-TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test changing object name") {
-  NDF_DB db;
-  db.init();
-  // create test file
-  auto ndf_file_id_opt =
-      db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
-  REQUIRE(ndf_file_id_opt.has_value());
-  auto ndf_file_id = ndf_file_id_opt.value();
+  SECTION("changing object names") {
+    NDF_DB db;
+    db.init();
+    // create test file
+    auto ndf_file_id_opt =
+        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
+    REQUIRE(ndf_file_id_opt.has_value());
+    auto ndf_file_id = ndf_file_id_opt.value();
 
-  // create test object into the test file
-  NDFObject obj1;
-  obj1.name = "test_object";
-  obj1.class_name = "TTestClass";
-  obj1.is_top_object = true;
-  obj1.export_path = "$/test/object1";
-  // add properties to test object
-  ndf_generator::add_random_uint8(obj1);
-  ndf_generator::add_random_uint16(obj1);
-  ndf_generator::add_random_uint32(obj1);
-  ndf_generator::add_random_list(obj1);
-  ndf_generator::add_object_reference(obj1, "test_object_2");
-  auto obj1_id_opt = db.insert_object(ndf_file_id, obj1);
-  REQUIRE(obj1_id_opt.has_value());
-  auto obj1_id = obj1_id_opt.value();
+    // create test objects into the test file
+    NDFObject obj;
+    obj.name = "ndf_object";
+    obj.class_name = "TTestClass";
+    obj.is_top_object = true;
+    obj.export_path = "$/test/object";
+    // add properties to test object
+    ndf_generator::add_random_uint8(obj);
+    ndf_generator::add_random_uint16(obj);
+    ndf_generator::add_random_uint32(obj);
+    ndf_generator::add_random_list(obj);
+    ndf_generator::add_object_reference(obj, "test_object");
+    ndf_generator::add_import_reference(obj, "$/test/object1");
+    auto obj_id_opt = db.insert_object(ndf_file_id, obj);
+    REQUIRE(obj_id_opt.has_value());
+    auto obj_id = obj_id_opt.value();
 
-  NDFObject obj2;
-  obj2.name = "test_object_2";
-  obj2.class_name = "TInt";
-  obj2.is_top_object = false;
-  obj2.export_path = "$/test/object2";
-  ndf_generator::add_random_uint8(obj2);
-  auto obj2_id_opt = db.insert_object(ndf_file_id, obj2);
-  REQUIRE(obj2_id_opt.has_value());
-  auto obj2_id = obj2_id_opt.value();
+    NDFObject obj1;
+    obj1.name = "test_object";
+    obj1.class_name = "TTestClass";
+    obj1.is_top_object = true;
+    obj1.export_path = "$/test/object1";
+    // add properties to test object
+    ndf_generator::add_random_uint8(obj1);
+    ndf_generator::add_random_uint16(obj1);
+    ndf_generator::add_random_uint32(obj1);
+    ndf_generator::add_random_list(obj1);
+    ndf_generator::add_object_reference(obj1, "test_object_2");
+    auto obj1_id_opt = db.insert_object(ndf_file_id, obj1);
+    REQUIRE(obj1_id_opt.has_value());
+    auto obj1_id = obj1_id_opt.value();
 
-  // now change object name of obj2 and check the name changed in the DB + the
-  // references
-  REQUIRE(db.change_object_name(obj2_id, "new_test_object"));
+    NDFObject obj2;
+    obj2.name = "test_object_2";
+    obj2.class_name = "TInt";
+    obj2.is_top_object = false;
+    obj2.export_path = "$/test/object2";
+    ndf_generator::add_random_uint8(obj2);
+    auto obj2_id_opt = db.insert_object(ndf_file_id, obj2);
+    REQUIRE(obj2_id_opt.has_value());
+    auto obj2_id = obj2_id_opt.value();
+
+    // now change object name of obj2 and check the name changed in the DB + the
+    // references
+    REQUIRE(db.change_object_name(obj2_id, "new_test_object"));
+    REQUIRE(db.change_export_path(obj1_id, "$/test/new_path"));
+    // check name is changed
+    auto db_obj2 = db.get_object(obj2_id);
+    REQUIRE(db_obj2.has_value());
+    REQUIRE(db_obj2.value().name == "new_test_object");
+    // check reference is changed
+    auto db_obj1 = db.get_object(obj1_id);
+    REQUIRE(db_obj1.has_value());
+    REQUIRE(db_obj1.value().properties.size() == 5);
+    REQUIRE(db_obj1.value().properties[4]->is_object_reference());
+    NDFPropertyObjectReference *obj_ref =
+        (NDFPropertyObjectReference *)db_obj1.value().properties[4].get();
+    REQUIRE(obj_ref->object_name == "new_test_object");
+    // check the other object reference is not changed
+    auto db_obj = db.get_object(obj_id);
+    REQUIRE(db_obj.has_value());
+    REQUIRE(db_obj.value().properties.size() == 6);
+    REQUIRE(db_obj.value().properties[4]->is_object_reference());
+    NDFPropertyObjectReference *obj_unchanged_ref =
+        (NDFPropertyObjectReference *)db_obj.value().properties[4].get();
+    REQUIRE(obj_unchanged_ref->object_name == "test_object");
+    // check changed import path
+    REQUIRE(db_obj1.value().export_path == "$/test/new_path");
+    REQUIRE(db_obj.value().properties[5]->is_import_reference());
+    NDFPropertyImportReference *import_ref =
+        (NDFPropertyImportReference *)db_obj.value().properties[5].get();
+    REQUIRE(import_ref->import_name == "$/test/new_path");
+  }
 }
