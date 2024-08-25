@@ -4,54 +4,77 @@
 
 #include "sqlite_helpers.hpp"
 
+std::unique_ptr<NDFProperty>
+NDFProperty::get_property_from_ndf_db(uint32_t ndf_type,
+                                      bool is_import_reference) {
+  if (ndf_type == 0x9) {
+    if (!is_import_reference) {
+      return std::make_unique<NDFPropertyObjectReference>();
+    } else {
+      return std::make_unique<NDFPropertyImportReference>();
+    }
+  }
+  return get_property_from_ndftype(ndf_type);
+}
+
+std::unique_ptr<NDFProperty>
+NDFProperty::get_db_property_type(NDF_DB *db, int prop_id, int pos) {
+  auto prop_opt = db->stmt_get_property.query_single<
+      std::tuple<int, std::string, int, int, int, uint32_t, bool, int>>(
+      prop_id);
+  if (!prop_opt) {
+    spdlog::error("Could not get property, id {}", prop_id);
+    return nullptr;
+  }
+  auto [_, _, _, _, key_position, key_type, is_import_reference, _] =
+      prop_opt.value();
+  if (pos != -1 && pos != key_position) {
+    spdlog::error("Position mismatch property required {} but is {}", pos,
+                  key_position);
+    return nullptr;
+  }
+  return get_property_from_ndf_db(key_type, is_import_reference);
+}
+
 // also sets the propery name and propery index
 int NDFProperty::get_db_property_value(NDF_DB *db, int property_id) {
   auto prop_opt = db->stmt_get_property.query_single<
-      std::tuple<int, std::string, int, int, int, uint32_t, int>>(property_id);
+      std::tuple<int, std::string, int, int, int, uint32_t, bool, int>>(
+      property_id);
   if (!prop_opt) {
     return false;
   }
-  auto [_, prop_name, prop_idx, _, _, _, value_id] = prop_opt.value();
+  auto [_, prop_name, prop_idx, _, _, _, _, value_id] = prop_opt.value();
   property_name = prop_name;
   property_idx = prop_idx;
   return value_id;
 }
 
-std::optional<uint32_t>
-NDFProperty::get_db_property_type(NDF_DB *db, int property_id) const {
-  auto prop_opt = db->stmt_get_property.query_single<
-      std::tuple<int, std::string, int, int, int, uint32_t, int>>(property_id);
-  if (!prop_opt) {
-    return std::nullopt;
-  }
-  auto [_, _, _, _, _, property_type, _] = prop_opt.value();
-  return property_type;
-}
-
-std::optional<int> NDFProperty::add_db_property(NDF_DB *db, int object_id,
-                                                int parent, int position,
-                                                int value_id) const {
+std::optional<int>
+NDFProperty::add_db_property(NDF_DB *db, int object_id, int parent,
+                             int position, int value_id,
+                             bool is_import_reference) const {
   std::optional<int> prop_id;
   if (parent == -1) {
     if (value_id == -1) {
       prop_id = db->stmt_insert_ndf_property.insert(
           object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
-          property_type, SQLNULL{});
+          property_type, is_import_reference, SQLNULL{});
     } else {
 
       prop_id = db->stmt_insert_ndf_property.insert(
           object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
-          property_type, value_id);
+          property_type, is_import_reference, value_id);
     }
   } else {
     if (value_id == -1) {
       prop_id = db->stmt_insert_ndf_property.insert(
           object_id, property_name, property_idx, parent, position,
-          property_type, SQLNULL{});
+          property_type, is_import_reference, SQLNULL{});
     } else {
       prop_id = db->stmt_insert_ndf_property.insert(
           object_id, property_name, property_idx, parent, position,
-          property_type, value_id);
+          property_type, is_import_reference, value_id);
     }
   }
   return prop_id;
@@ -458,7 +481,9 @@ bool NDFPropertyImportReference::to_ndf_db(NDF_DB *db, int object_id,
   if (!value_id) {
     return -1;
   }
-  return add_db_property(db, object_id, parent, position, value_id.value())
+  // note the extra true flag for is_import_reference
+  return add_db_property(db, object_id, parent, position, value_id.value(),
+                         true)
       .has_value();
 }
 
@@ -585,19 +610,7 @@ bool NDFPropertyList::from_ndf_db(NDF_DB *db, int property_id) {
   }
   for (auto [pos, prop_id] : value_opt.value() | std::views::enumerate) {
     // now get the corresponding properties and initialize them
-    auto prop_opt = db->stmt_get_property.query_single<
-        std::tuple<int, std::string, int, int, int, uint32_t, int>>(prop_id);
-    if (!prop_opt) {
-      spdlog::error("Could not get property for id {}", prop_id);
-      return false;
-    }
-    auto [_, _, _, _, position, type, _] = prop_opt.value();
-    if (pos != position) {
-      spdlog::error("Position mismatch in list property required {} but is {}",
-                    pos, position);
-      return false;
-    }
-    auto prop = get_property_from_ndftype(type);
+    auto prop = get_db_property_type(db, prop_id, pos);
     prop->from_ndf_db(db, prop_id);
     values.push_back(std::move(prop));
   }
@@ -640,21 +653,7 @@ bool NDFPropertyMap::from_ndf_db(NDF_DB *db, int property_id) {
   while (prop_it != value.end()) {
     auto key_prop_id = *prop_it;
     // handle key property
-    auto key_prop_opt = db->stmt_get_property.query_single<
-        std::tuple<int, std::string, int, int, int, uint32_t, int>>(
-        key_prop_id);
-    if (!key_prop_opt) {
-      spdlog::error("Could not get key property, id {}", key_prop_id);
-      return false;
-    }
-    auto [_, _, _, _, key_position, key_type, _] = key_prop_opt.value();
-    if (pos != key_position) {
-      spdlog::error(
-          "Position mismatch in map key property required {} but is {}", pos,
-          key_position);
-      return false;
-    }
-    auto key_prop = get_property_from_ndftype(key_type);
+    auto key_prop = get_db_property_type(db, key_prop_id, pos++);
     key_prop->from_ndf_db(db, key_prop_id);
     pos += 1;
     prop_it++;
@@ -665,21 +664,7 @@ bool NDFPropertyMap::from_ndf_db(NDF_DB *db, int property_id) {
     // handle value property
     auto value_prop_id = *prop_it;
     // now get the corresponding properties and initialize them
-    auto value_prop_opt = db->stmt_get_property.query_single<
-        std::tuple<int, std::string, int, int, int, uint32_t, int>>(
-        value_prop_id);
-    if (!value_prop_opt) {
-      spdlog::error("Could not get key property, id {}", value_prop_id);
-      return false;
-    }
-    auto [_, _, _, _, value_position, value_type, _] = value_prop_opt.value();
-    if (pos != value_position) {
-      spdlog::error(
-          "Position mismatch in map value property required {} but is {}", pos,
-          value_position);
-      return false;
-    }
-    auto value_prop = get_property_from_ndftype(value_type);
+    auto value_prop = get_db_property_type(db, value_prop_id, pos++);
     value_prop->from_ndf_db(db, value_prop_id);
     pos += 1;
     prop_it++;
@@ -730,48 +715,28 @@ bool NDFPropertyPair::from_ndf_db(NDF_DB *db, int property_id) {
   auto prop_it = value.begin();
   auto key_prop_id = *prop_it;
   // handle key property
-  auto key_prop_opt = db->stmt_get_property.query_single<
-      std::tuple<int, std::string, int, int, int, uint32_t, int>>(key_prop_id);
-  if (!key_prop_opt) {
-    spdlog::error("Could not get key property, id {}", key_prop_id);
+  auto key_prop = get_db_property_type(db, key_prop_id, pos++);
+  if (!key_prop) {
+    spdlog::error("Couldn't get key property type!");
     return false;
   }
-  auto [_, _, _, _, key_position, key_type, _] = key_prop_opt.value();
-  if (pos != key_position) {
-    spdlog::error(
-        "Position mismatch in pair first property required {} but is {}", pos,
-        key_position);
-    return false;
-  }
-  auto key_prop = get_property_from_ndftype(key_type);
   key_prop->from_ndf_db(db, key_prop_id);
   first = std::move(key_prop);
   pos += 1;
   prop_it++;
   if (prop_it == value.end()) {
-    spdlog::error("No second property after first property! @{}", pos);
+    spdlog::error("No second property after first property!");
     return false;
   }
   // handle value property
   auto value_prop_id = *prop_it;
   // now get the corresponding properties and initialize them
-  auto value_prop_opt = db->stmt_get_property.query_single<
-      std::tuple<int, std::string, int, int, int, uint32_t, int>>(
-      value_prop_id);
-  if (!value_prop_opt) {
-    spdlog::error("Could not get key property, id {}", value_prop_id);
+  auto value_prop = get_db_property_type(db, value_prop_id, pos++);
+  if (!value_prop) {
+    spdlog::error("Couldn't get value property type!");
     return false;
   }
-  auto [_, _, _, _, value_position, value_type, _] = value_prop_opt.value();
-  if (pos != value_position) {
-    spdlog::error(
-        "Position mismatch in pair second property required {} but is {}", pos,
-        value_position);
-    return false;
-  }
-  auto value_prop = get_property_from_ndftype(value_type);
   value_prop->from_ndf_db(db, value_prop_id);
-  pos += 1;
   prop_it++;
   second = std::move(value_prop);
   return true;

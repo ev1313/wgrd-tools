@@ -54,6 +54,8 @@ struct NDFProperty {
   static std::unique_ptr<NDFProperty>
   get_property_from_ndf_xml(uint32_t ndf_type, const pugi::xml_node &ndf_node);
   static std::unique_ptr<NDFProperty>
+  get_property_from_ndf_db(uint32_t ndf_type, bool is_import_reference);
+  static std::unique_ptr<NDFProperty>
   get_property_from_ndfbin(uint32_t ndf_type, std::istream &stream);
   virtual void to_ndf_xml(pugi::xml_node &) const {
     throw std::runtime_error("Not implemented");
@@ -88,10 +90,11 @@ struct NDFProperty {
 
   // used by ndf_db
   int get_db_property_value(NDF_DB *db, int property_id);
-  std::optional<uint32_t> get_db_property_type(NDF_DB *db,
-                                               int property_id) const;
+  static std::unique_ptr<NDFProperty>
+  get_db_property_type(NDF_DB *db, int prop_id, int pos = -1);
   std::optional<int> add_db_property(NDF_DB *db, int object_id, int parent,
-                                     int position, int value_id) const;
+                                     int position, int value_id,
+                                     bool is_import_reference = false) const;
 };
 
 struct NDFPropertyBool : NDFProperty {

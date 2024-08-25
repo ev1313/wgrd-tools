@@ -62,6 +62,48 @@ bool check_property_equality(NDFProperty *prop1, NDFProperty *prop2) {
       return false;
     }
   }
+  if (prop1->property_type == NDFPropertyType::Int16) {
+    NDFPropertyInt16 *p1 = (NDFPropertyInt16 *)(prop1);
+    NDFPropertyInt16 *p2 = (NDFPropertyInt16 *)(prop2);
+    if (p1->value != p2->value) {
+      return false;
+    }
+  }
+  if (prop1->property_type == NDFPropertyType::Int32) {
+    NDFPropertyInt32 *p1 = (NDFPropertyInt32 *)(prop1);
+    NDFPropertyInt32 *p2 = (NDFPropertyInt32 *)(prop2);
+    if (p1->value != p2->value) {
+      return false;
+    }
+  }
+  if (prop1->property_type == NDFPropertyType::String) {
+    NDFPropertyString *p1 = (NDFPropertyString *)(prop1);
+    NDFPropertyString *p2 = (NDFPropertyString *)(prop2);
+    if (p1->value != p2->value) {
+      return false;
+    }
+  }
+  if (prop1->property_type == NDFPropertyType::WideString) {
+    NDFPropertyWideString *p1 = (NDFPropertyWideString *)(prop1);
+    NDFPropertyWideString *p2 = (NDFPropertyWideString *)(prop2);
+    if (p1->value != p2->value) {
+      return false;
+    }
+  }
+  if (prop1->is_import_reference()) {
+    NDFPropertyImportReference *p1 = (NDFPropertyImportReference *)(prop1);
+    NDFPropertyImportReference *p2 = (NDFPropertyImportReference *)(prop2);
+    if (p1->import_name != p2->import_name) {
+      return false;
+    }
+  }
+  if (prop1->is_object_reference()) {
+    NDFPropertyObjectReference *p1 = (NDFPropertyObjectReference *)(prop1);
+    NDFPropertyObjectReference *p2 = (NDFPropertyObjectReference *)(prop2);
+    if (p1->object_name != p2->object_name) {
+      return false;
+    }
+  }
   if (prop1->is_list()) {
     NDFPropertyList *list1 = (NDFPropertyList *)(prop1);
     NDFPropertyList *list2 = (NDFPropertyList *)(prop2);
@@ -71,6 +113,40 @@ bool check_property_equality(NDFProperty *prop1, NDFProperty *prop2) {
                                    list2->values[x].get())) {
         return false;
       }
+    }
+  }
+  return true;
+}
+
+bool check_object_equality(NDFObject *obj1, NDFObject *obj2) {
+  if (obj1->name != obj2->name) {
+    spdlog::info("object names differ {} should be {}", obj2->name, obj1->name);
+    return false;
+  }
+  if (obj1->class_name != obj2->class_name) {
+    spdlog::info("object class names differ {} should be {}", obj2->class_name,
+                 obj1->class_name);
+    return false;
+  }
+  if (obj1->export_path != obj2->export_path) {
+    spdlog::info("object export paths differ {} should be {}",
+                 obj2->export_path, obj1->export_path);
+    return false;
+  }
+  if (obj1->is_top_object != obj2->is_top_object) {
+    spdlog::info("object top object flag differ {} should be {}",
+                 obj2->is_top_object, obj1->is_top_object);
+    return false;
+  }
+  if (obj1->properties.size() != obj2->properties.size()) {
+    spdlog::info("object property counts differ {} should be {}",
+                 obj2->properties.size(), obj1->properties.size());
+    return false;
+  }
+  for (size_t x = 0; x < obj1->properties.size(); x++) {
+    if (!check_property_equality(obj1->properties[x].get(),
+                                 obj2->properties[x].get())) {
+      return false;
     }
   }
   return true;
@@ -92,6 +168,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test ndf properties -> DB") {
   ndf_generator::add_random_uint16(obj1);
   ndf_generator::add_random_uint32(obj1);
   ndf_generator::add_random_list(obj1);
+  ndf_generator::add_object_reference(obj1, "test_object");
 
   // insert into DB
   auto obj_id_opt = db.insert_object(ndf_file_id, obj1);
@@ -101,15 +178,45 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test ndf properties -> DB") {
   // now check the DB contains the correct values
   auto db_obj = db.get_object(obj_id);
   REQUIRE(db_obj.has_value());
-  REQUIRE(obj1.name == db_obj->name);
-  REQUIRE(obj1.class_name == db_obj->class_name);
-  REQUIRE(obj1.export_path == db_obj->export_path);
-  REQUIRE(obj1.is_top_object == db_obj->is_top_object);
-  REQUIRE(obj1.properties.size() == db_obj->properties.size());
-  for (size_t i = 0; i < obj1.properties.size(); i++) {
-    REQUIRE(check_property_equality(obj1.properties[i].get(),
-                                    db_obj->properties[i].get()));
-  }
+  REQUIRE(check_object_equality(&obj1, &db_obj.value()));
 }
 
-TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test DB -> ndf") {}
+TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "test changing object name") {
+  NDF_DB db;
+  db.init();
+  // create test file
+  auto ndf_file_id_opt =
+      db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
+  REQUIRE(ndf_file_id_opt.has_value());
+  auto ndf_file_id = ndf_file_id_opt.value();
+
+  // create test object into the test file
+  NDFObject obj1;
+  obj1.name = "test_object";
+  obj1.class_name = "TTestClass";
+  obj1.is_top_object = true;
+  obj1.export_path = "$/test/object1";
+  // add properties to test object
+  ndf_generator::add_random_uint8(obj1);
+  ndf_generator::add_random_uint16(obj1);
+  ndf_generator::add_random_uint32(obj1);
+  ndf_generator::add_random_list(obj1);
+  ndf_generator::add_object_reference(obj1, "test_object_2");
+  auto obj1_id_opt = db.insert_object(ndf_file_id, obj1);
+  REQUIRE(obj1_id_opt.has_value());
+  auto obj1_id = obj1_id_opt.value();
+
+  NDFObject obj2;
+  obj2.name = "test_object_2";
+  obj2.class_name = "TInt";
+  obj2.is_top_object = false;
+  obj2.export_path = "$/test/object2";
+  ndf_generator::add_random_uint8(obj2);
+  auto obj2_id_opt = db.insert_object(ndf_file_id, obj2);
+  REQUIRE(obj2_id_opt.has_value());
+  auto obj2_id = obj2_id_opt.value();
+
+  // now change object name of obj2 and check the name changed in the DB + the
+  // references
+  REQUIRE(db.change_object_name(obj2_id, "new_test_object"));
+}

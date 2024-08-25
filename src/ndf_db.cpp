@@ -40,6 +40,7 @@ bool NDF_DB::init_statements() {
                                             parent INTEGER REFERENCES ndf_property(id) ON UPDATE CASCADE ON DELETE CASCADE,
                                             position INTEGER,
                                             type INTEGER,
+                                            is_import_reference BOOLEAN,
                                             value INTEGER
                                             ); )rstr");
 
@@ -186,7 +187,7 @@ bool NDF_DB::init_statements() {
       R"rstr( INSERT INTO ndf_object (ndf_id, object_name, class_name, export_path, is_top_object) VALUES (?,?,?,?,?); )rstr");
   stmt_insert_ndf_property.init(
       db,
-      R"rstr( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, value) VALUES (?,?,?,?,?,?,?); )rstr");
+      R"rstr( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, is_import_reference, value) VALUES (?,?,?,?,?,?,?,?); )rstr");
   stmt_insert_ndf_bool.init(
       db, R"rstr( INSERT INTO ndf_bool (value) VALUES (?); )rstr");
   stmt_insert_ndf_int8.init(
@@ -256,7 +257,7 @@ bool NDF_DB::init_statements() {
 
   stmt_get_property.init(
       db,
-      R"rstr( SELECT object_id, property_name, property_index, parent, position, type, value FROM ndf_property WHERE id=?; )rstr");
+      R"rstr( SELECT object_id, property_name, property_index, parent, position, type, is_import_reference, value FROM ndf_property WHERE id=?; )rstr");
 
   // value accessors
   stmt_get_bool_value.init(
@@ -317,6 +318,79 @@ bool NDF_DB::init_statements() {
       db,
       R"rstr( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )rstr");
 
+  // change values
+  stmt_set_bool_value.init(
+      db, R"rstr( UPDATE ndf_bool SET value=? WHERE id=?; )rstr");
+  stmt_set_int8_value.init(
+      db, R"rstr( UPDATE ndf_int8 SET value=? WHERE id=?; )rstr");
+  stmt_set_uint8_value.init(
+      db, R"rstr( UPDATE ndf_uint8 SET value=? WHERE id=?; )rstr");
+  stmt_set_int16_value.init(
+      db, R"rstr( UPDATE ndf_int16 SET value=? WHERE id=?; )rstr");
+  stmt_set_uint16_value.init(
+      db, R"rstr( UPDATE ndf_uint16 SET value=? WHERE id=?; )rstr");
+  stmt_set_int32_value.init(
+      db, R"rstr( UPDATE ndf_int32 SET value=? WHERE id=?; )rstr");
+  stmt_set_uint32_value.init(
+      db, R"rstr( UPDATE ndf_uint32 SET value=? WHERE id=?; )rstr");
+  stmt_set_float32_value.init(
+      db, R"rstr( UPDATE ndf_float32 SET value=? WHERE id=?; )rstr");
+  stmt_set_float64_value.init(
+      db, R"rstr( UPDATE ndf_float64 SET value=? WHERE id=?; )rstr");
+  stmt_set_string_value.init(
+      db, R"rstr( UPDATE ndf_string SET value=? WHERE id=?; )rstr");
+  stmt_set_widestring_value.init(
+      db, R"rstr( UPDATE ndf_widestring SET value=? WHERE id=?; )rstr");
+  stmt_set_F32_vec2_value.init(
+      db,
+      R"rstr( UPDATE ndf_F32_vec2 SET value_x=?, value_y=? WHERE id=?; )rstr");
+  stmt_set_F32_vec3_value.init(
+      db,
+      R"rstr( UPDATE ndf_F32_vec3 SET value_x=?, value_y=?, value_z=? WHERE id=?; )rstr");
+  stmt_set_F32_vec4_value.init(
+      db,
+      R"rstr( UPDATE ndf_F32_vec4 SET value_x=?, value_y=?, value_z=?, value_w=? WHERE id=?; )rstr");
+  stmt_set_S32_vec2_value.init(
+      db,
+      R"rstr( UPDATE ndf_S32_vec2 SET value_x=?, value_y=? WHERE id=?; )rstr");
+  stmt_set_S32_vec3_value.init(
+      db,
+      R"rstr( UPDATE ndf_S32_vec3 SET value_x=?, value_y=?, value_z=? WHERE id=?; )rstr");
+  stmt_set_S32_vec4_value.init(
+      db,
+      R"rstr( UPDATE ndf_S32_vec4 SET value_x=?, value_y=?, value_z=?, value_w=? WHERE id=?; )rstr");
+  stmt_set_color_value.init(
+      db,
+      R"rstr( UPDATE ndf_color SET value_r=?, value_g=?, value_b=?, value_a=? WHERE id=?; )rstr");
+  stmt_set_object_reference_value.init(
+      db, R"rstr( UPDATE ndf_object_reference SET value=? WHERE id=?; )rstr");
+  stmt_set_import_reference_value.init(
+      db, R"rstr( UPDATE ndf_import_reference SET value=? WHERE id=?; )rstr");
+  stmt_set_GUID_value.init(
+      db, R"rstr( UPDATE ndf_GUID SET value=? WHERE id=?; )rstr");
+  stmt_set_path_reference_value.init(
+      db, R"rstr( UPDATE ndf_path_reference SET value=? WHERE id=?; )rstr");
+  stmt_set_localisation_hash_value.init(
+      db, R"rstr( UPDATE ndf_localisation_hash SET value=? WHERE id=?; )rstr");
+  stmt_set_hash_value.init(
+      db, R"rstr( UPDATE ndf_hash SET value=? WHERE id=?; )rstr");
+  // object updates
+  stmt_set_object_name.init(
+      db,
+      R"rstr( UPDATE ndf_object SET object_name=? WHERE object_name=?; )rstr");
+  stmt_update_object_reference.init(db,
+                                    R"rstr( UPDATE ndf_object_reference
+                                            SET value=? WHERE value=? AND
+                                            (id) IN (
+                                            SELECT ndf_property.value
+                                            FROM ndf_property
+                                            INNER JOIN ndf_object
+                                            ON ndf_object.id=ndf_property.object_id
+                                            WHERE ndf_property.type=9 AND ndf_property.is_import_reference=FALSE AND ndf_object.ndf_id=?); )rstr");
+  stmt_update_import_reference.init(
+      db,
+      R"rstr( UPDATE ndf_import_reference SET value=? WHERE value=?; )rstr");
+
   return true;
 }
 
@@ -330,7 +404,8 @@ bool NDF_DB::init() {
 }
 
 bool NDF_DB::init(fs::path path) {
-  int rc = sqlite3_open(path.c_str(), &db);
+  std::string path_str = path;
+  int rc = sqlite3_open(path_str.c_str(), &db);
 
   if (rc != SQLITE_OK) {
     spdlog::error("Could not open SQLite DB: {}", sqlite3_errmsg(db));
@@ -404,15 +479,7 @@ std::optional<NDFObject> NDF_DB::get_object(int object_idx) {
 std::optional<std::unique_ptr<NDFProperty>>
 NDF_DB::get_property(int property_id) {
   // get property type
-  auto prop_opt =
-      stmt_get_property
-          .query_single<std::tuple<int, std::string, int, int, int, int, int>>(
-              property_id);
-  if (!prop_opt) {
-    return std::nullopt;
-  }
-  auto [_, _, _, _, _, prop_type, _] = prop_opt.value();
-  auto property = NDFProperty::get_property_from_ndftype(prop_type);
+  auto property = NDFProperty::get_db_property_type(this, property_id);
   if (!property) {
     return std::nullopt;
   }
@@ -420,4 +487,9 @@ NDF_DB::get_property(int property_id) {
     return std::nullopt;
   }
   return property;
+}
+
+bool NDF_DB::change_object_name(int object_id, std::string new_name) {
+  //
+  return false;
 }

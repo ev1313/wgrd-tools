@@ -2,6 +2,7 @@
 // creates dat files with some random ndfbin data
 // and their corresponding xml files
 #include "generator.hpp"
+#include "ndf_properties.hpp"
 
 #include <argparse/argparse.hpp>
 
@@ -75,6 +76,22 @@ std::unique_ptr<NDFProperty> ndf_generator::gen_random_list(int idx) {
 
 void ndf_generator::add_random_list(NDFObject &obj) {
   auto prop = gen_random_uint32(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
+std::unique_ptr<NDFProperty>
+ndf_generator::gen_object_reference(int idx, std::string ref) {
+  auto prop = std::make_unique<NDFPropertyObjectReference>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::ObjectReference;
+  prop->property_name = std::format("ObjRef_{}", prop->property_idx);
+
+  prop->object_name = ref;
+  return prop;
+}
+
+void ndf_generator::add_object_reference(NDFObject &obj, std::string ref) {
+  auto prop = gen_object_reference(obj.properties.size(), ref);
   obj.properties.push_back(std::move(prop));
 }
 

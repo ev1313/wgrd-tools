@@ -15,7 +15,7 @@ private:
   // insertion statements
   SQLStatement<3, 0> stmt_insert_ndf_file;
   SQLStatement<5, 0> stmt_insert_ndf_object;
-  SQLStatement<7, 0> stmt_insert_ndf_property;
+  SQLStatement<8, 0> stmt_insert_ndf_property;
   SQLStatement<1, 0> stmt_insert_ndf_bool;
   SQLStatement<1, 0> stmt_insert_ndf_int8;
   SQLStatement<1, 0> stmt_insert_ndf_uint8;
@@ -45,7 +45,7 @@ private:
   SQLStatement<1, 5> stmt_get_object;
   SQLStatement<1, 1> stmt_get_object_properties;
   SQLStatement<1, 1> stmt_get_property_names;
-  SQLStatement<1, 7> stmt_get_property;
+  SQLStatement<1, 8> stmt_get_property;
   // accessors for values, should only return a single row each
   SQLStatement<1, 1> stmt_get_bool_value;
   SQLStatement<1, 1> stmt_get_int8_value;
@@ -74,6 +74,36 @@ private:
   // accessor used by lists, maps and pairs, returns all associated property ids
   // in order
   SQLStatement<1, 1> stmt_get_list_items;
+
+  // update statements
+  SQLStatement<1, 1> stmt_set_bool_value;
+  SQLStatement<1, 1> stmt_set_uint8_value;
+  SQLStatement<1, 1> stmt_set_int8_value;
+  SQLStatement<1, 1> stmt_set_uint16_value;
+  SQLStatement<1, 1> stmt_set_int16_value;
+  SQLStatement<1, 1> stmt_set_uint32_value;
+  SQLStatement<1, 1> stmt_set_int32_value;
+  SQLStatement<1, 1> stmt_set_float32_value;
+  SQLStatement<1, 1> stmt_set_float64_value;
+  SQLStatement<1, 1> stmt_set_string_value;
+  SQLStatement<1, 1> stmt_set_widestring_value;
+  SQLStatement<1, 1> stmt_set_F32_vec2_value;
+  SQLStatement<1, 1> stmt_set_F32_vec3_value;
+  SQLStatement<1, 1> stmt_set_F32_vec4_value;
+  SQLStatement<1, 1> stmt_set_S32_vec2_value;
+  SQLStatement<1, 1> stmt_set_S32_vec3_value;
+  SQLStatement<1, 1> stmt_set_S32_vec4_value;
+  SQLStatement<1, 1> stmt_set_color_value;
+  SQLStatement<1, 1> stmt_set_import_reference_value;
+  SQLStatement<1, 1> stmt_set_object_reference_value;
+  SQLStatement<1, 1> stmt_set_GUID_value;
+  SQLStatement<1, 1> stmt_set_path_reference_value;
+  SQLStatement<1, 1> stmt_set_localisation_hash_value;
+  SQLStatement<1, 1> stmt_set_hash_value;
+  // object update statements
+  SQLStatement<0, 2> stmt_set_object_name;
+  SQLStatement<0, 3> stmt_update_object_reference;
+  SQLStatement<0, 2> stmt_update_import_reference;
 
   bool init_statements();
 
@@ -118,4 +148,6 @@ public:
 
   std::optional<NDFObject> get_object(int object_idx);
   std::optional<std::unique_ptr<NDFProperty>> get_property(int property_idx);
+
+  bool change_object_name(int object_idx, std::string new_name);
 };
