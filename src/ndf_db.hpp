@@ -147,6 +147,7 @@ public:
                        int parent = -1, int position = -1);
 
   std::optional<NDFObject> get_object(int object_idx);
+  // std::optional<std::vector<NDFObject>> get_objects(int ndf_idx);
   std::optional<std::unique_ptr<NDFProperty>> get_property(int property_idx);
 
   bool change_object_name(int object_idx, std::string new_name);

@@ -404,7 +404,7 @@ bool NDF_DB::init() {
 }
 
 bool NDF_DB::init(fs::path path) {
-  std::string path_str = path;
+  std::string path_str = path.string();
   int rc = sqlite3_open(path_str.c_str(), &db);
 
   if (rc != SQLITE_OK) {
@@ -490,6 +490,7 @@ NDF_DB::get_property(int property_id) {
 }
 
 bool NDF_DB::change_object_name(int object_id, std::string new_name) {
-  //
+  // first update to the new name
+  // now update all references to this object
   return false;
 }
