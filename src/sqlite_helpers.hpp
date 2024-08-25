@@ -2,7 +2,29 @@
 
 #include "sqlite3.h"
 #include <spdlog/spdlog.h>
+#include <type_traits>
 #include <utility>
+
+template <class T> inline constexpr bool is_tuple_like_v = false;
+
+template <class... Elems>
+inline constexpr bool is_tuple_like_v<std::tuple<Elems...>> = true;
+
+template <class T1, class T2>
+inline constexpr bool is_tuple_like_v<std::pair<T1, T2>> = true;
+
+template <class T, size_t N>
+inline constexpr bool is_tuple_like_v<std::array<T, N>> = true;
+
+template <class It, class Sent, std::ranges::subrange_kind Kind>
+inline constexpr bool is_tuple_like_v<std::ranges::subrange<It, Sent, Kind>> =
+    true;
+
+template <class T>
+concept tuple_like = is_tuple_like_v<std::remove_cvref_t<T>>;
+
+template <class T>
+concept not_tuple_like = !tuple_like<T>;
 
 // add this type to your input parameter list to bind a NULL value
 struct SQLNULL {};
@@ -21,9 +43,11 @@ public:
     sqlite3_finalize(stmt);
   }
   bool init(sqlite3 *db, const char *query) {
+    assert(sqlite3_threadsafe() == 1);
     int rc = sqlite3_prepare_v2(db, query, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
       spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
+      spdlog::error("query: '{}'", query);
       return false;
     }
     return true;
@@ -65,9 +89,6 @@ private:
   }
 
   template <typename T, typename... Ts> bool bind(T elem, Ts &&...args) {
-    if constexpr (BindCount != -1) {
-      static_assert(BindCount == sizeof...(Ts));
-    }
     bool ret = bind(elem);
     ret = ret && bind(std::forward<Ts>(args)...);
     if (!ret) {
@@ -80,6 +101,9 @@ private:
 
 public:
   template <typename... Ts> bool execute(Ts &&...args) {
+    if constexpr (BindCount != -1) {
+      static_assert(BindCount == sizeof...(Ts));
+    }
     reset();
     if constexpr (sizeof...(args) > 0) {
       if (!bind(std::forward<Ts>(args)...)) {
@@ -129,9 +153,9 @@ private:
     m_index += 1;
   }
 
-  template <typename TupleT, std::size_t... Is, typename... Ts>
-  std::optional<std::vector<TupleT>> query(std::index_sequence<Is...>,
-                                           Ts &&...args) {
+  template <tuple_like TupleT, std::size_t... Is, typename... Ts>
+  std::optional<std::vector<TupleT>> query_tup(std::index_sequence<Is...>,
+                                               Ts &&...args) {
     if constexpr (BindCount != -1) {
       static_assert(BindCount == sizeof...(Ts));
     }
@@ -158,14 +182,127 @@ private:
 
     return result;
   }
-
-public:
-  template <typename TupleT, std::size_t TupSize = std::tuple_size_v<TupleT>,
+  template <tuple_like TupleT, std::size_t TupSize = std::tuple_size_v<TupleT>,
             typename... Ts>
-  std::optional<std::vector<TupleT>> query(Ts &&...args) {
+  std::optional<std::vector<TupleT>> query_tup(Ts &&...args) {
     if constexpr (ColumnCount != -1) {
       static_assert(ColumnCount == TupSize);
     }
-    return query<TupleT>(std::make_index_sequence<TupSize>{}, args...);
+    return query_tup<TupleT>(std::make_index_sequence<TupSize>{}, args...);
+  }
+
+public:
+  template <typename T, typename... Ts>
+  std::optional<std::vector<T>> query(Ts &&...args) {
+    if constexpr (BindCount != -1) {
+      static_assert(BindCount == sizeof...(Ts));
+    }
+    if constexpr (is_tuple_like_v<T>) {
+      return query_tup<T>(args...);
+    } else {
+      if constexpr (ColumnCount != -1) {
+        static_assert(ColumnCount == 1);
+      }
+      reset();
+      if constexpr (sizeof...(args) > 0) {
+        if (!bind(std::forward<Ts>(args)...)) {
+          return std::nullopt;
+        }
+      }
+      std::vector<T> result;
+      auto rc = sqlite3_step(stmt);
+      while (rc == SQLITE_ROW) {
+        m_index = 0;
+        T col;
+        get_column(col);
+        rc = sqlite3_step(stmt);
+        result.push_back(std::move(col));
+      }
+      if (rc != SQLITE_DONE) {
+        spdlog::error("Failed to execute statement: {}",
+                      sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        return std::nullopt;
+      }
+
+      return result;
+    }
+  }
+
+private:
+  template <tuple_like TupleT, std::size_t... Is, typename... Ts>
+  std::optional<TupleT> query_single_tup(std::index_sequence<Is...>,
+                                         Ts &&...args) {
+    if constexpr (BindCount != -1) {
+      static_assert(BindCount == sizeof...(Ts));
+    }
+    reset();
+    if constexpr (sizeof...(args) > 0) {
+      if (!bind(std::forward<Ts>(args)...)) {
+        return std::nullopt;
+      }
+    }
+    auto rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW) {
+      spdlog::error("Failed to execute statement: {}",
+                    sqlite3_errmsg(sqlite3_db_handle(stmt)));
+      return std::nullopt;
+    }
+    m_index = 0;
+    TupleT col;
+    (get_column(std::get<Is>(col)), ...);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+      spdlog::error("Failed to execute statement: {}",
+                    sqlite3_errmsg(sqlite3_db_handle(stmt)));
+      return std::nullopt;
+    }
+
+    return std::move(col);
+  }
+  template <tuple_like TupleT, std::size_t TupSize = std::tuple_size_v<TupleT>,
+            typename... Ts>
+  std::optional<TupleT> query_single_tup(Ts &&...args) {
+    if constexpr (ColumnCount != -1) {
+      static_assert(ColumnCount == TupSize);
+    }
+    return query_single_tup<TupleT>(std::make_index_sequence<TupSize>{},
+                                    args...);
+  }
+
+public:
+  /* this executes the sql function and gets a single result row from it. It
+   * fails, if it returns 0 or >1 rows. */
+  template <typename T, typename... Ts>
+  std::optional<T> query_single(Ts &&...args) {
+    if constexpr (BindCount != -1) {
+      static_assert(BindCount == sizeof...(Ts));
+    }
+    if constexpr (is_tuple_like_v<T>) {
+      return query_single_tup<T>(args...);
+    } else {
+      reset();
+      if constexpr (sizeof...(args) > 0) {
+        if (!bind(std::forward<Ts>(args)...)) {
+          return std::nullopt;
+        }
+      }
+      auto rc = sqlite3_step(stmt);
+      if (rc != SQLITE_ROW) {
+        spdlog::error("Failed to execute statement: {}",
+                      sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        return std::nullopt;
+      }
+      m_index = 0;
+      T col;
+      get_column(col);
+      rc = sqlite3_step(stmt);
+      if (rc != SQLITE_DONE) {
+        spdlog::error("Failed to execute statement: {}",
+                      sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        return std::nullopt;
+      }
+
+      return std::move(col);
+    }
   }
 };

@@ -30,7 +30,7 @@ void NDFPropertyBool::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_bool), sizeof(NDF_Bool));
   value = ndf_bool.value;
 }
-void NDFPropertyBool::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyBool::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Bool ndf_bool;
   ndf_bool.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_bool), sizeof(NDF_Bool));
@@ -47,7 +47,7 @@ void NDFPropertyUInt8::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_int8), sizeof(NDF_UInt8));
   value = ndf_int8.value;
 }
-void NDFPropertyUInt8::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyUInt8::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_UInt8 ndf_int8;
   ndf_int8.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_int8), sizeof(NDF_UInt8));
@@ -64,7 +64,7 @@ void NDFPropertyInt32::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_int32), sizeof(NDF_Int32));
   value = ndf_int32.value;
 }
-void NDFPropertyInt32::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyInt32::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Int32 ndf_int32;
   ndf_int32.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_int32), sizeof(NDF_Int32));
@@ -81,7 +81,7 @@ void NDFPropertyUInt32::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_uint32), sizeof(NDF_UInt32));
   value = ndf_uint32.value;
 }
-void NDFPropertyUInt32::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyUInt32::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_UInt32 ndf_uint32;
   ndf_uint32.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_uint32), sizeof(NDF_UInt32));
@@ -98,7 +98,7 @@ void NDFPropertyFloat32::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_float32), sizeof(NDF_Float32));
   value = ndf_float32.value;
 }
-void NDFPropertyFloat32::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyFloat32::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Float32 ndf_float32;
   ndf_float32.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_float32), sizeof(NDF_Float32));
@@ -115,7 +115,7 @@ void NDFPropertyFloat64::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_float64), sizeof(NDF_Float64));
   value = ndf_float64.value;
 }
-void NDFPropertyFloat64::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyFloat64::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Float64 ndf_float64;
   ndf_float64.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_float64), sizeof(NDF_Float64));
@@ -133,7 +133,7 @@ void NDFPropertyString::from_ndfbin(NDF *root, std::istream &stream) {
   value = root->string_table[ndf_string.string_index];
 }
 
-void NDFPropertyString::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyString::to_ndfbin(NDF *root, std::ostream &stream) const {
   NDF_String ndf_string;
   ndf_string.string_index = root->get_or_add_string(value);
   stream.write(reinterpret_cast<char *>(&ndf_string), sizeof(NDF_String));
@@ -161,7 +161,7 @@ void NDFPropertyWideString::from_ndfbin(NDF *, std::istream &stream) {
   spdlog::debug("WideString: {}", value);
 }
 
-void NDFPropertyWideString::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyWideString::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_WideString ndf_wide_string;
   ndf_wide_string.length = value.size() * 2;
   stream.write(reinterpret_cast<char *>(&ndf_wide_string),
@@ -186,7 +186,7 @@ void NDFPropertyF32_vec3::from_ndfbin(NDF *, std::istream &stream) {
   y = ndf_f32_vec3.y;
   z = ndf_f32_vec3.z;
 }
-void NDFPropertyF32_vec3::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyF32_vec3::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_F32_vec3 ndf_f32_vec3;
   ndf_f32_vec3.x = x;
   ndf_f32_vec3.y = y;
@@ -211,7 +211,7 @@ void NDFPropertyF32_vec4::from_ndfbin(NDF *, std::istream &stream) {
   z = ndf_f32_vec4.z;
   w = ndf_f32_vec4.w;
 }
-void NDFPropertyF32_vec4::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyF32_vec4::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_F32_vec4 ndf_f32_vec4;
   ndf_f32_vec4.x = x;
   ndf_f32_vec4.y = y;
@@ -237,7 +237,7 @@ void NDFPropertyColor::from_ndfbin(NDF *, std::istream &stream) {
   b = ndf_color.b;
   a = ndf_color.a;
 }
-void NDFPropertyColor::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyColor::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Color ndf_color;
   ndf_color.r = r;
   ndf_color.g = g;
@@ -261,7 +261,7 @@ void NDFPropertyS32_vec3::from_ndfbin(NDF *, std::istream &stream) {
   y = ndf_s32_vec3.y;
   z = ndf_s32_vec3.z;
 }
-void NDFPropertyS32_vec3::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyS32_vec3::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_S32_vec3 ndf_s32_vec3;
   ndf_s32_vec3.x = x;
   ndf_s32_vec3.y = y;
@@ -283,7 +283,8 @@ void NDFPropertyObjectReference::from_ndfbin(NDF *, std::istream &stream) {
   object_name = "Object_" + std::to_string(ndf_object_reference.object_index);
 }
 
-void NDFPropertyObjectReference::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyObjectReference::to_ndfbin(NDF *root,
+                                           std::ostream &stream) const {
   uint32_t reference_type = ReferenceType::Object;
   stream.write(reinterpret_cast<char *>(&reference_type),
                sizeof(reference_type));
@@ -307,7 +308,8 @@ void NDFPropertyImportReference::from_ndfbin(NDF *root, std::istream &stream) {
   import_name = root->import_name_table[ndf_import_reference.import_index];
 }
 
-void NDFPropertyImportReference::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyImportReference::to_ndfbin(NDF *root,
+                                           std::ostream &stream) const {
   uint32_t reference_type = ReferenceType::Import;
   stream.write(reinterpret_cast<char *>(&reference_type),
                sizeof(reference_type));
@@ -336,7 +338,7 @@ void NDFPropertyList::from_ndfbin(NDF *root, std::istream &stream) {
   }
 }
 
-void NDFPropertyList::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyList::to_ndfbin(NDF *root, std::ostream &stream) const {
   NDF_List ndf_list;
   ndf_list.count = values.size();
   stream.write(reinterpret_cast<char *>(&ndf_list), sizeof(NDF_List));
@@ -370,7 +372,7 @@ void NDFPropertyMap::from_ndfbin(NDF *root, std::istream &stream) {
   }
 }
 
-void NDFPropertyMap::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyMap::to_ndfbin(NDF *root, std::ostream &stream) const {
   NDF_Map ndf_map;
   ndf_map.count = values.size();
   stream.write(reinterpret_cast<char *>(&ndf_map), sizeof(NDF_Map));
@@ -395,7 +397,7 @@ void NDFPropertyInt16::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_s16), sizeof(NDF_Int16));
   value = ndf_s16.value;
 }
-void NDFPropertyInt16::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyInt16::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Int16 ndf_s16;
   ndf_s16.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_s16), sizeof(NDF_Int16));
@@ -412,7 +414,7 @@ void NDFPropertyUInt16::from_ndfbin(NDF *, std::istream &stream) {
   stream.read(reinterpret_cast<char *>(&ndf_u16), sizeof(NDF_UInt16));
   value = ndf_u16.value;
 }
-void NDFPropertyUInt16::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyUInt16::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_UInt16 ndf_u16;
   ndf_u16.value = value;
   stream.write(reinterpret_cast<char *>(&ndf_u16), sizeof(NDF_UInt16));
@@ -432,7 +434,7 @@ void NDFPropertyGUID::from_ndfbin(NDF *, std::istream &stream) {
     guid += std::format("{:02X}", byte);
   }
 }
-void NDFPropertyGUID::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyGUID::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_GUID ndf_guid;
   for (uint32_t i = 0; i < 16; i++) {
     std::from_chars(guid.c_str() + i * 2, guid.c_str() + i * 2 + 2,
@@ -454,7 +456,8 @@ void NDFPropertyPathReference::from_ndfbin(NDF *root, std::istream &stream) {
   path = root->string_table[ndf_path_reference.path_index];
 }
 
-void NDFPropertyPathReference::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyPathReference::to_ndfbin(NDF *root,
+                                         std::ostream &stream) const {
   NDF_PathReference ndf_path_reference;
   ndf_path_reference.path_index = root->get_or_add_string(path);
   stream.write(reinterpret_cast<char *>(&ndf_path_reference),
@@ -476,7 +479,7 @@ void NDFPropertyLocalisationHash::from_ndfbin(NDF *, std::istream &stream) {
     hash += std::format("{:02X}", byte);
   }
 }
-void NDFPropertyLocalisationHash::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyLocalisationHash::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_LocalisationHash ndf_hash;
   for (uint32_t i = 0; i < 8; i++) {
     std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2,
@@ -499,7 +502,7 @@ void NDFPropertyS32_vec2::from_ndfbin(NDF *, std::istream &stream) {
   x = ndf_s32_vec2.x;
   y = ndf_s32_vec2.y;
 }
-void NDFPropertyS32_vec2::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyS32_vec2::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_S32_vec2 ndf_s32_vec2;
   ndf_s32_vec2.x = x;
   ndf_s32_vec2.y = y;
@@ -519,7 +522,7 @@ void NDFPropertyF32_vec2::from_ndfbin(NDF *, std::istream &stream) {
   x = ndf_f32_vec2.x;
   y = ndf_f32_vec2.y;
 }
-void NDFPropertyF32_vec2::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyF32_vec2::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_F32_vec2 ndf_f32_vec2;
   ndf_f32_vec2.x = x;
   ndf_f32_vec2.y = y;
@@ -538,7 +541,7 @@ void NDFPropertyPair::from_ndfbin(NDF *root, std::istream &stream) {
   second->property_name = "Second";
 }
 
-void NDFPropertyPair::to_ndfbin(NDF *root, std::ostream &stream) {
+void NDFPropertyPair::to_ndfbin(NDF *root, std::ostream &stream) const {
   uint32_t ndf_type = first->property_type;
   stream.write(reinterpret_cast<char *>(&ndf_type), sizeof(ndf_type));
   first->to_ndfbin(root, stream);
@@ -561,7 +564,7 @@ void NDFPropertyHash::from_ndfbin(NDF *, std::istream &stream) {
     hash += std::format("{:02X}", byte);
   }
 }
-void NDFPropertyHash::to_ndfbin(NDF *, std::ostream &stream) {
+void NDFPropertyHash::to_ndfbin(NDF *, std::ostream &stream) const {
   NDF_Hash ndf_hash;
   for (uint32_t i = 0; i < 8; i++) {
     std::from_chars(hash.c_str() + i * 2, hash.c_str() + i * 2 + 2,

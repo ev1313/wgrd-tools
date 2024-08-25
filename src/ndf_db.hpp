@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ndf_properties.hpp"
 #include "sqlite3.h"
 #include "sqlite_helpers.hpp"
 #include <filesystem>
@@ -11,34 +12,6 @@ namespace fs = std::filesystem;
 class NDF_DB {
 private:
   sqlite3 *db;
-  // create table statements
-  SQLStatement<0, 0> stmt_create_ndf_file_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_object_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_property_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_bool_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_int8_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_uint8_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_int16_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_uint16_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_int32_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_uint32_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_float32_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_float64_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_string_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_widestring_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_F32_vec2_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_F32_vec3_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_F32_vec4_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_S32_vec2_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_S32_vec3_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_S32_vec4_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_color_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_object_reference_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_import_reference_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_GUID_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_path_reference_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_localisation_hash_tbl;
-  SQLStatement<0, 0> stmt_create_ndf_hash_tbl;
   // insertion statements
   SQLStatement<3, 0> stmt_insert_ndf_file;
   SQLStatement<5, 0> stmt_insert_ndf_object;
@@ -69,7 +42,10 @@ private:
   SQLStatement<1, 0> stmt_insert_ndf_hash;
   // accessors for objects
   SQLStatement<1, 1> stmt_get_object_names;
+  SQLStatement<1, 5> stmt_get_object;
+  SQLStatement<1, 1> stmt_get_object_properties;
   SQLStatement<1, 1> stmt_get_property_names;
+  SQLStatement<1, 7> stmt_get_property;
   // accessors for values, should only return a single row each
   SQLStatement<1, 1> stmt_get_bool_value;
   SQLStatement<1, 1> stmt_get_int8_value;
@@ -101,12 +77,45 @@ private:
 
   bool init_statements();
 
+  friend struct NDFProperty;
+  friend struct NDFPropertyBool;
+  friend struct NDFPropertyUInt8;
+  friend struct NDFPropertyInt8;
+  friend struct NDFPropertyUInt16;
+  friend struct NDFPropertyInt16;
+  friend struct NDFPropertyUInt32;
+  friend struct NDFPropertyInt32;
+  friend struct NDFPropertyFloat32;
+  friend struct NDFPropertyFloat64;
+  friend struct NDFPropertyString;
+  friend struct NDFPropertyWideString;
+  friend struct NDFPropertyF32_vec2;
+  friend struct NDFPropertyF32_vec3;
+  friend struct NDFPropertyF32_vec4;
+  friend struct NDFPropertyS32_vec2;
+  friend struct NDFPropertyS32_vec3;
+  friend struct NDFPropertyColor;
+  friend struct NDFPropertyImportReference;
+  friend struct NDFPropertyObjectReference;
+  friend struct NDFPropertyGUID;
+  friend struct NDFPropertyPathReference;
+  friend struct NDFPropertyLocalisationHash;
+  friend struct NDFPropertyHash;
+  friend struct NDFPropertyList;
+  friend struct NDFPropertyMap;
+  friend struct NDFPropertyPair;
+
 public:
   bool init();
   bool init(fs::path path);
   ~NDF_DB();
 
-  bool insert_object(int ndf_idx, const NDFObject &object);
-  bool insert_property(int object_idx, const NDFProperty &property,
+  std::optional<int> insert_file(std::string vfs_path, std::string dat_path,
+                                 std::string fs_path);
+  std::optional<int> insert_object(int ndf_idx, const NDFObject &object);
+  bool insert_property(const NDFProperty &property, int object_idx,
                        int parent = -1, int position = -1);
+
+  std::optional<NDFObject> get_object(int object_idx);
+  std::optional<std::unique_ptr<NDFProperty>> get_property(int property_idx);
 };

@@ -43,6 +43,7 @@ add_library(ndf STATIC
     src/ndfbin.cpp
     src/ndf_bin_properties.cpp
     src/ndf_xml_properties.cpp
+    src/ndf_db_properties.cpp
     src/ndf_db.hpp
     src/ndf_db.cpp
     src/sqlite_helpers.hpp

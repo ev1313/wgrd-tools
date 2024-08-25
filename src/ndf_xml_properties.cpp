@@ -97,7 +97,7 @@ NDFProperty::get_property_from_ndf_xml(uint32_t ndf_type,
   return get_property_from_ndftype(ndf_type);
 }
 
-void NDFPropertyBool::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyBool::to_ndf_xml(pugi::xml_node &node) const {
   auto bool_node = node.append_child(property_name.c_str());
   bool_node.append_attribute("value").set_value(value);
   bool_node.append_attribute("typeId").set_value(property_type);
@@ -108,7 +108,7 @@ void NDFPropertyBool::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyUInt8::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyUInt8::to_ndf_xml(pugi::xml_node &node) const {
   auto int8_node = node.append_child(property_name.c_str());
   int8_node.append_attribute("value").set_value(value);
   int8_node.append_attribute("typeId").set_value(property_type);
@@ -119,7 +119,7 @@ void NDFPropertyUInt8::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyInt32::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyInt32::to_ndf_xml(pugi::xml_node &node) const {
   auto int32_node = node.append_child(property_name.c_str());
   int32_node.append_attribute("value").set_value(value);
   int32_node.append_attribute("typeId").set_value(property_type);
@@ -130,7 +130,7 @@ void NDFPropertyInt32::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyUInt32::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyUInt32::to_ndf_xml(pugi::xml_node &node) const {
   auto uint32_node = node.append_child(property_name.c_str());
   uint32_node.append_attribute("value").set_value(value);
   uint32_node.append_attribute("typeId").set_value(property_type);
@@ -141,7 +141,7 @@ void NDFPropertyUInt32::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyFloat32::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyFloat32::to_ndf_xml(pugi::xml_node &node) const {
   auto float32_node = node.append_child(property_name.c_str());
   float32_node.append_attribute("value").set_value(value);
   float32_node.append_attribute("typeId").set_value(property_type);
@@ -152,7 +152,7 @@ void NDFPropertyFloat32::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyFloat64::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyFloat64::to_ndf_xml(pugi::xml_node &node) const {
   auto float64_node = node.append_child(property_name.c_str());
   float64_node.append_attribute("value").set_value(value);
   float64_node.append_attribute("typeId").set_value(property_type);
@@ -163,7 +163,7 @@ void NDFPropertyFloat64::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyString::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyString::to_ndf_xml(pugi::xml_node &node) const {
   auto string_node = node.append_child(property_name.c_str());
   string_node.append_attribute("value").set_value(value.c_str());
   string_node.append_attribute("typeId").set_value(property_type);
@@ -174,7 +174,7 @@ void NDFPropertyString::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyWideString::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyWideString::to_ndf_xml(pugi::xml_node &node) const {
   auto wide_string_node = node.append_child(property_name.c_str());
   wide_string_node.append_attribute("str").set_value(value.c_str());
   wide_string_node.append_attribute("typeId").set_value(property_type);
@@ -185,7 +185,7 @@ void NDFPropertyWideString::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyF32_vec3::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyF32_vec3::to_ndf_xml(pugi::xml_node &node) const {
   auto f32_vec3_node = node.append_child(property_name.c_str());
   f32_vec3_node.append_attribute("x").set_value(x);
   f32_vec3_node.append_attribute("y").set_value(y);
@@ -200,7 +200,7 @@ void NDFPropertyF32_vec3::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyF32_vec4::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyF32_vec4::to_ndf_xml(pugi::xml_node &node) const {
   auto f32_vec4_node = node.append_child(property_name.c_str());
   f32_vec4_node.append_attribute("x").set_value(x);
   f32_vec4_node.append_attribute("y").set_value(y);
@@ -217,7 +217,7 @@ void NDFPropertyF32_vec4::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyColor::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyColor::to_ndf_xml(pugi::xml_node &node) const {
   auto color_node = node.append_child(property_name.c_str());
   color_node.append_attribute("r").set_value(r);
   color_node.append_attribute("g").set_value(g);
@@ -234,7 +234,7 @@ void NDFPropertyColor::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyS32_vec3::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyS32_vec3::to_ndf_xml(pugi::xml_node &node) const {
   auto s32_vec3_node = node.append_child(property_name.c_str());
   s32_vec3_node.append_attribute("x").set_value(x);
   s32_vec3_node.append_attribute("y").set_value(y);
@@ -249,7 +249,7 @@ void NDFPropertyS32_vec3::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyObjectReference::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyObjectReference::to_ndf_xml(pugi::xml_node &node) const {
   auto reference_node = node.append_child(property_name.c_str());
   reference_node.append_attribute("object").set_value(object_name.c_str());
   reference_node.append_attribute("typeId").set_value(property_type);
@@ -262,7 +262,7 @@ void NDFPropertyObjectReference::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("referenceType").as_string() == std::string("object"));
 }
 
-void NDFPropertyImportReference::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyImportReference::to_ndf_xml(pugi::xml_node &node) const {
   auto reference_node = node.append_child(property_name.c_str());
   reference_node.append_attribute("import").set_value(import_name.c_str());
   reference_node.append_attribute("typeId").set_value(property_type);
@@ -275,7 +275,7 @@ void NDFPropertyImportReference::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("referenceType").as_string() == std::string("import"));
 }
 
-void NDFPropertyList::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyList::to_ndf_xml(pugi::xml_node &node) const {
   auto list_node = node.append_child(property_name.c_str());
   list_node.append_attribute("typeId").set_value(property_type);
   for (auto const &value : values) {
@@ -291,7 +291,7 @@ void NDFPropertyList::from_ndf_xml(const pugi::xml_node &node) {
   }
 }
 
-void NDFPropertyMap::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyMap::to_ndf_xml(pugi::xml_node &node) const {
   auto map_node = node.append_child(property_name.c_str());
   map_node.append_attribute("typeId").set_value(property_type);
   for (auto const &[key, value] : values) {
@@ -318,7 +318,7 @@ void NDFPropertyMap::from_ndf_xml(const pugi::xml_node &node) {
   }
 }
 
-void NDFPropertyInt16::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyInt16::to_ndf_xml(pugi::xml_node &node) const {
   auto s16_node = node.append_child(property_name.c_str());
   s16_node.append_attribute("value").set_value(value);
   s16_node.append_attribute("typeId").set_value(property_type);
@@ -329,7 +329,7 @@ void NDFPropertyInt16::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyUInt16::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyUInt16::to_ndf_xml(pugi::xml_node &node) const {
   auto u16_node = node.append_child(property_name.c_str());
   u16_node.append_attribute("value").set_value(value);
   u16_node.append_attribute("typeId").set_value(property_type);
@@ -340,7 +340,7 @@ void NDFPropertyUInt16::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyGUID::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyGUID::to_ndf_xml(pugi::xml_node &node) const {
   auto guid_node = node.append_child(property_name.c_str());
   guid_node.append_attribute("guid").set_value(guid.c_str());
   guid_node.append_attribute("typeId").set_value(property_type);
@@ -351,7 +351,7 @@ void NDFPropertyGUID::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyPathReference::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyPathReference::to_ndf_xml(pugi::xml_node &node) const {
   auto path_node = node.append_child(property_name.c_str());
   path_node.append_attribute("typeId").set_value(property_type);
   path_node.append_attribute("path").set_value(path.c_str());
@@ -362,7 +362,7 @@ void NDFPropertyPathReference::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyLocalisationHash::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyLocalisationHash::to_ndf_xml(pugi::xml_node &node) const {
   auto hash_node = node.append_child(property_name.c_str());
   hash_node.append_attribute("hash").set_value(hash.c_str());
   hash_node.append_attribute("typeId").set_value(property_type);
@@ -373,7 +373,7 @@ void NDFPropertyLocalisationHash::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyS32_vec2::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyS32_vec2::to_ndf_xml(pugi::xml_node &node) const {
   auto s32_vec2_node = node.append_child(property_name.c_str());
   s32_vec2_node.append_attribute("x").set_value(x);
   s32_vec2_node.append_attribute("y").set_value(y);
@@ -386,7 +386,7 @@ void NDFPropertyS32_vec2::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyF32_vec2::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyF32_vec2::to_ndf_xml(pugi::xml_node &node) const {
   auto f32_vec2_node = node.append_child(property_name.c_str());
   f32_vec2_node.append_attribute("x").set_value(x);
   f32_vec2_node.append_attribute("y").set_value(y);
@@ -399,7 +399,7 @@ void NDFPropertyF32_vec2::from_ndf_xml(const pugi::xml_node &node) {
   assert(node.attribute("typeId").as_uint() == property_type);
 }
 
-void NDFPropertyPair::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyPair::to_ndf_xml(pugi::xml_node &node) const {
   auto pair_node = node.append_child(property_name.c_str());
   pair_node.append_attribute("typeId").set_value(property_type);
   first->to_ndf_xml(pair_node);
@@ -420,7 +420,7 @@ void NDFPropertyPair::from_ndf_xml(const pugi::xml_node &node) {
   second->from_ndf_xml(second_node);
 }
 
-void NDFPropertyHash::to_ndf_xml(pugi::xml_node &node) {
+void NDFPropertyHash::to_ndf_xml(pugi::xml_node &node) const {
   auto hash_node = node.append_child(property_name.c_str());
   hash_node.append_attribute("hash").set_value(hash.c_str());
   hash_node.append_attribute("typeId").set_value(property_type);

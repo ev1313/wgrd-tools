@@ -13,12 +13,17 @@ namespace py = pybind11;
 
 #include "pugixml.hpp"
 
-void ndf_generator::add_random_object(NDF &ndf) {
+NDFObject ndf_generator::gen_random_object() {
   NDFObject obj;
   obj.name = "test_object";
   obj.class_name = "TTestClass";
   obj.is_top_object = true;
   obj.export_path = "$/test/object1";
+  return obj;
+}
+
+void ndf_generator::add_random_object(NDF &ndf) {
+  auto obj = gen_random_object();
 
   ndf.add_object(std::move(obj));
 }
@@ -41,12 +46,35 @@ void ndf_generator::add_random_uint16(NDFObject &obj) {
   obj.properties.push_back(std::move(prop));
 }
 
-void ndf_generator::add_random_uint32(NDFObject &obj) {
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_uint32(int idx) {
   auto prop = std::make_unique<NDFPropertyUInt32>();
-  prop->property_idx = obj.properties.size();
+  prop->property_idx = idx;
   prop->property_type = NDFPropertyType::UInt32;
   prop->property_name = std::format("TestUInt32_{}", prop->property_idx);
   prop->value = std::experimental::randint((int)0, (int)INT_MAX);
+  return prop;
+}
+
+void ndf_generator::add_random_uint32(NDFObject &obj) {
+  auto prop = gen_random_uint32(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_list(int idx) {
+  auto prop = std::make_unique<NDFPropertyList>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::UInt32;
+  prop->property_name = std::format("TestUInt32_{}", prop->property_idx);
+
+  for (int i = 0; i < 10; i++) {
+    auto item = gen_random_uint32(-1);
+    prop->values.push_back(std::move(item));
+  }
+  return prop;
+}
+
+void ndf_generator::add_random_list(NDFObject &obj) {
+  auto prop = gen_random_uint32(obj.properties.size());
   obj.properties.push_back(std::move(prop));
 }
 
