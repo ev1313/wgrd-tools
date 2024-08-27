@@ -158,7 +158,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     db.init();
     // create test file
     auto ndf_file_id_opt =
-        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
+        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar", "test");
     REQUIRE(ndf_file_id_opt.has_value());
     auto ndf_file_id = ndf_file_id_opt.value();
 
@@ -170,12 +170,15 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     ndf_generator::add_random_uint32(obj1);
     ndf_generator::add_random_list(obj1);
     ndf_generator::add_object_reference(obj1, "test_object");
+    ndf_generator::add_import_reference(obj1, "$/foo/bar");
 
     // insert into DB
+    spdlog::info("add obj1");
     auto obj_id_opt = db.insert_object(ndf_file_id, obj1);
     REQUIRE(obj_id_opt.has_value());
     auto obj_id = obj_id_opt.value();
 
+    spdlog::info("check obj1");
     // now check the DB contains the correct values
     auto db_obj = db.get_object(obj_id);
     REQUIRE(db_obj.has_value());
@@ -187,10 +190,11 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     db.init();
     // create test file
     auto ndf_file_id_opt =
-        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar");
+        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar", "test");
     REQUIRE(ndf_file_id_opt.has_value());
     auto ndf_file_id = ndf_file_id_opt.value();
 
+    spdlog::info("creating obj");
     // create test objects into the test file
     NDFObject obj;
     obj.name = "ndf_object";
@@ -207,7 +211,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     auto obj_id_opt = db.insert_object(ndf_file_id, obj);
     REQUIRE(obj_id_opt.has_value());
     auto obj_id = obj_id_opt.value();
-
+    spdlog::info("creating obj1");
     NDFObject obj1;
     obj1.name = "test_object";
     obj1.class_name = "TTestClass";
@@ -223,6 +227,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     REQUIRE(obj1_id_opt.has_value());
     auto obj1_id = obj1_id_opt.value();
 
+    spdlog::info("creating obj2");
     NDFObject obj2;
     obj2.name = "test_object_2";
     obj2.class_name = "TInt";
@@ -232,6 +237,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     auto obj2_id_opt = db.insert_object(ndf_file_id, obj2);
     REQUIRE(obj2_id_opt.has_value());
     auto obj2_id = obj2_id_opt.value();
+    db.fix_references(ndf_file_id);
 
     // now change object name of obj2 and check the name changed in the DB + the
     // references

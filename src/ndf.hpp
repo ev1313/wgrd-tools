@@ -171,8 +171,8 @@ private:
     }
     return obj_idx->second;
   }
-  friend class NDFPropertyObjectReference;
-  friend class NDFPropertyImportReference;
+  friend struct NDFPropertyObjectReference;
+  friend struct NDFPropertyImportReference;
 
 public:
   NDFObject &get_object(const std::string &str) { return object_map.at(str); }

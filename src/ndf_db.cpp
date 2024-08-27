@@ -19,7 +19,9 @@ bool NDF_DB::init_statements() {
                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                                             vfs_path TEXT,
                                             dat_path TEXT,
-                                            fs_path TEXT
+                                            fs_path TEXT,
+                                            game_version TEXT,
+                                            is_current BOOLEAN
                                             ); )rstr");
   create_table(db,
                R"rstr( CREATE TABLE ndf_object(
@@ -151,12 +153,14 @@ bool NDF_DB::init_statements() {
   create_table(db,
                R"rstr( CREATE TABLE ndf_object_reference(
                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                         value TEXT
+                                         referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
+                                         optional_value TEXT
                                          ); )rstr");
   create_table(db,
                R"rstr( CREATE TABLE ndf_import_reference(
                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    value TEXT
+                                                    referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
+                                                    optional_value TEXT
                                                     ); )rstr");
   create_table(db,
                R"rstr( CREATE TABLE ndf_GUID(
@@ -181,7 +185,7 @@ bool NDF_DB::init_statements() {
   // inserters
   stmt_insert_ndf_file.init(
       db,
-      R"rstr( INSERT INTO ndf_file (vfs_path, dat_path, fs_path) VALUES (?,?,?); )rstr");
+      R"rstr( INSERT INTO ndf_file (vfs_path, dat_path, fs_path, game_version, is_current) VALUES (?,?,?,?,?); )rstr");
   stmt_insert_ndf_object.init(
       db,
       R"rstr( INSERT INTO ndf_object (ndf_id, object_name, class_name, export_path, is_top_object) VALUES (?,?,?,?,?); )rstr");
@@ -232,9 +236,11 @@ bool NDF_DB::init_statements() {
       db,
       R"rstr( INSERT INTO ndf_color (value_r, value_g, value_b, value_a) VALUES (?,?,?,?); )rstr");
   stmt_insert_ndf_object_reference.init(
-      db, R"rstr( INSERT INTO ndf_object_reference (value) VALUES (?); )rstr");
+      db,
+      R"rstr( INSERT INTO ndf_object_reference (referenced_object, optional_value) VALUES (?,?); )rstr");
   stmt_insert_ndf_import_reference.init(
-      db, R"rstr( INSERT INTO ndf_import_reference (value) VALUES (?); )rstr");
+      db,
+      R"rstr( INSERT INTO ndf_import_reference (referenced_object, optional_value) VALUES (?,?); )rstr");
   stmt_insert_ndf_GUID.init(
       db, R"rstr( INSERT INTO ndf_GUID (value) VALUES (?); )rstr");
   stmt_insert_ndf_localisation_hash.init(
@@ -243,6 +249,10 @@ bool NDF_DB::init_statements() {
       db, R"rstr( INSERT INTO ndf_hash (value) VALUES (?); )rstr");
 
   // accessors
+  stmt_get_object_from_name.init(
+      db, R"rstr( SELECT id FROM ndf_object WHERE object_name=?; )rstr");
+  stmt_get_object_from_export_path.init(
+      db, R"rstr( SELECT id FROM ndf_object WHERE export_path=?; )rstr");
   stmt_get_object_ndf_id.init(
       db, R"rstr( SELECT ndf_id FROM ndf_object WHERE id=?; )rstr");
   stmt_get_object_name.init(
@@ -308,9 +318,11 @@ bool NDF_DB::init_statements() {
       db,
       R"rstr( SELECT value_r, value_g, value_b, value_a FROM ndf_color WHERE id=?; )rstr");
   stmt_get_object_reference_value.init(
-      db, R"rstr( SELECT value FROM ndf_object_reference WHERE id=?; )rstr");
+      db,
+      R"rstr( SELECT referenced_object, optional_value FROM ndf_object_reference WHERE id=?; )rstr");
   stmt_get_import_reference_value.init(
-      db, R"rstr( SELECT value FROM ndf_import_reference WHERE id=?; )rstr");
+      db,
+      R"rstr( SELECT referenced_object, optional_value FROM ndf_import_reference WHERE id=?; )rstr");
   stmt_get_GUID_value.init(
       db, R"rstr( SELECT value FROM ndf_GUID WHERE id=?; )rstr");
   stmt_get_path_reference_value.init(
@@ -369,9 +381,11 @@ bool NDF_DB::init_statements() {
       db,
       R"rstr( UPDATE ndf_color SET value_r=?, value_g=?, value_b=?, value_a=? WHERE id=?; )rstr");
   stmt_set_object_reference_value.init(
-      db, R"rstr( UPDATE ndf_object_reference SET value=? WHERE id=?; )rstr");
+      db,
+      R"rstr( UPDATE ndf_object_reference SET referenced_object=?,optional_value=? WHERE id=?; )rstr");
   stmt_set_import_reference_value.init(
-      db, R"rstr( UPDATE ndf_import_reference SET value=? WHERE id=?; )rstr");
+      db,
+      R"rstr( UPDATE ndf_import_reference SET referenced_object=?,optional_value=? WHERE id=?; )rstr");
   stmt_set_GUID_value.init(
       db, R"rstr( UPDATE ndf_GUID SET value=? WHERE id=?; )rstr");
   stmt_set_path_reference_value.init(
@@ -385,18 +399,22 @@ bool NDF_DB::init_statements() {
       db, R"rstr( UPDATE ndf_object SET object_name=? WHERE id=?; )rstr");
   stmt_set_object_export_path.init(
       db, R"rstr( UPDATE ndf_object SET export_path=? WHERE id=?; )rstr");
-  stmt_update_object_reference.init(db,
-                                    R"rstr( UPDATE ndf_object_reference
-                                            SET value=? WHERE value=? AND
-                                            (id) IN (
-                                            SELECT ndf_property.value
-                                            FROM ndf_property
-                                            INNER JOIN ndf_object
-                                            ON ndf_object.id=ndf_property.object_id
-                                            WHERE ndf_property.type=9 AND ndf_property.is_import_reference=FALSE AND ndf_object.ndf_id=?); )rstr");
-  stmt_update_import_reference.init(
-      db,
-      R"rstr( UPDATE ndf_import_reference SET value=? WHERE value=?; )rstr");
+
+  stmt_update_object_references.init(db,
+                                     R"rstr( UPDATE ndf_object_reference
+                                             SET referenced_object=ndf_object.id
+                                             FROM ndf_object
+                                             WHERE referenced_object IS NULL
+                                             AND optional_value=ndf_object.object_name
+                                             AND ndf_object.ndf_id=?; )rstr");
+  stmt_update_import_references.init(db,
+                                     R"rstr( UPDATE ndf_import_reference
+                                             SET referenced_object=ndf_object.id
+                                             FROM ndf_object
+                                             WHERE referenced_object IS NULL
+                                             AND optional_value=ndf_object.export_path
+                                             AND (ndf_object.ndf_id) IN
+                                             (SELECT id FROM ndf_file WHERE is_current=True); )rstr");
 
   return true;
 }
@@ -429,8 +447,10 @@ NDF_DB::~NDF_DB() {
 
 std::optional<int> NDF_DB::insert_file(std::string vfs_path,
                                        std::string dat_path,
-                                       std::string fs_path) {
-  return stmt_insert_ndf_file.insert(vfs_path, dat_path, fs_path);
+                                       std::string fs_path, std::string version,
+                                       bool is_current) {
+  return stmt_insert_ndf_file.insert(vfs_path, dat_path, fs_path, version,
+                                     is_current);
 }
 
 std::optional<int> NDF_DB::insert_object(int ndf_idx, const NDFObject &object) {
@@ -497,43 +517,28 @@ NDF_DB::get_property(int property_id) {
 }
 
 bool NDF_DB::change_object_name(int object_id, std::string new_name) {
-  auto ndf_id_opt = stmt_get_object_ndf_id.query_single<int>(object_id);
-  if (!ndf_id_opt.has_value()) {
-    spdlog::error("Didn't find object {}", object_id);
-    return false;
-  }
-  auto old_obj_name_opt =
-      stmt_get_object_name.query_single<std::string>(object_id);
-  if (!old_obj_name_opt.has_value()) {
-    spdlog::error("Didn't find object {}", object_id);
-    return false;
-  }
-  // first update to the new name
+  // update to the new name
   if (!stmt_set_object_name.execute(new_name, object_id)) {
-    return false;
-  }
-  // now update all references to this object
-  if (!stmt_update_object_reference.execute(new_name, old_obj_name_opt.value(),
-                                            ndf_id_opt.value())) {
     return false;
   }
   return true;
 }
 
 bool NDF_DB::change_export_path(int object_id, std::string new_path) {
-  auto old_export_path_opt =
-      stmt_get_object_export_path.query_single<std::string>(object_id);
-  if (!old_export_path_opt.has_value()) {
-    spdlog::error("Didn't find object {}", object_id);
-    return false;
-  }
-  // first update to the new name
+  // update to the new export_path
   if (!stmt_set_object_export_path.execute(new_path, object_id)) {
     return false;
   }
-  // now update all references to this object
-  if (!stmt_update_import_reference.execute(new_path,
-                                            old_export_path_opt.value())) {
+  return true;
+}
+
+bool NDF_DB::fix_references(int ndf_id) {
+  // update all object references
+  if (!stmt_update_object_references.execute(ndf_id)) {
+    return false;
+  }
+  // update all import references
+  if (!stmt_update_import_references.execute()) {
     return false;
   }
   return true;

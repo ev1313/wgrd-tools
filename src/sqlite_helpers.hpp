@@ -2,6 +2,7 @@
 
 #include "sqlite3.h"
 #include <spdlog/spdlog.h>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -175,7 +176,7 @@ private:
       result.push_back(std::move(col));
     }
     if (rc != SQLITE_DONE) {
-      spdlog::error("Failed to execute statement: {}",
+      spdlog::error("Failed to query_tup statement: {}",
                     sqlite3_errmsg(sqlite3_db_handle(stmt)));
       return std::nullopt;
     }
@@ -219,7 +220,7 @@ public:
         result.push_back(std::move(col));
       }
       if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to execute statement: {}",
+        spdlog::error("Failed to query statement: {}",
                       sqlite3_errmsg(sqlite3_db_handle(stmt)));
         return std::nullopt;
       }
@@ -243,7 +244,7 @@ private:
     }
     auto rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
-      spdlog::error("Failed to execute statement: {}",
+      spdlog::error("Failed to query_single_tup statement: {}",
                     sqlite3_errmsg(sqlite3_db_handle(stmt)));
       return std::nullopt;
     }
@@ -252,7 +253,7 @@ private:
     (get_column(std::get<Is>(col)), ...);
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-      spdlog::error("Failed to execute statement: {}",
+      spdlog::error("Failed to query_single_tup statement: {}",
                     sqlite3_errmsg(sqlite3_db_handle(stmt)));
       return std::nullopt;
     }
@@ -288,8 +289,8 @@ public:
       }
       auto rc = sqlite3_step(stmt);
       if (rc != SQLITE_ROW) {
-        spdlog::error("Failed to execute statement: {}",
-                      sqlite3_errmsg(sqlite3_db_handle(stmt)));
+        // spdlog::error("Failed to query_single statement: {}",
+        //               sqlite3_errmsg(sqlite3_db_handle(stmt)));
         return std::nullopt;
       }
       m_index = 0;
@@ -297,7 +298,7 @@ public:
       get_column(col);
       rc = sqlite3_step(stmt);
       if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to execute statement: {}",
+        spdlog::error("Failed to query_single statement: {}",
                       sqlite3_errmsg(sqlite3_db_handle(stmt)));
         return std::nullopt;
       }

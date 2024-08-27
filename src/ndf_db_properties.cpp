@@ -102,6 +102,13 @@ bool NDFPropertyBool::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyBool::change_value(NDF_DB *db, int property_id,
+                                   bool new_value) {
+  auto ret = db->stmt_set_bool_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
+}
+
 bool NDFPropertyUInt8::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -122,6 +129,13 @@ bool NDFPropertyUInt8::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyUInt8::change_value(NDF_DB *db, int property_id,
+                                    uint8_t new_value) {
+  auto ret = db->stmt_set_uint8_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
 }
 
 bool NDFPropertyUInt16::from_ndf_db(NDF_DB *db, int property_id) {
@@ -147,6 +161,13 @@ bool NDFPropertyUInt16::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyUInt16::change_value(NDF_DB *db, int property_id,
+                                     uint16_t new_value) {
+  auto ret = db->stmt_set_uint16_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
+}
+
 bool NDFPropertyInt16::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -167,6 +188,13 @@ bool NDFPropertyInt16::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyInt16::change_value(NDF_DB *db, int property_id,
+                                    int16_t new_value) {
+  auto ret = db->stmt_set_int16_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
 }
 
 bool NDFPropertyUInt32::from_ndf_db(NDF_DB *db, int property_id) {
@@ -191,6 +219,13 @@ bool NDFPropertyUInt32::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyUInt32::change_value(NDF_DB *db, int property_id,
+                                     uint32_t new_value) {
+  auto ret = db->stmt_set_uint32_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
+}
+
 bool NDFPropertyInt32::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -211,6 +246,13 @@ bool NDFPropertyInt32::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyInt32::change_value(NDF_DB *db, int property_id,
+                                    int32_t new_value) {
+  auto ret = db->stmt_set_int32_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
 }
 
 bool NDFPropertyFloat32::from_ndf_db(NDF_DB *db, int property_id) {
@@ -235,6 +277,13 @@ bool NDFPropertyFloat32::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyFloat32::change_value(NDF_DB *db, int property_id,
+                                      float new_value) {
+  auto ret = db->stmt_set_float32_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
+}
+
 bool NDFPropertyFloat64::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -255,6 +304,13 @@ bool NDFPropertyFloat64::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyFloat64::change_value(NDF_DB *db, int property_id,
+                                      double new_value) {
+  auto ret = db->stmt_set_float64_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
 }
 
 bool NDFPropertyString::from_ndf_db(NDF_DB *db, int property_id) {
@@ -280,6 +336,13 @@ bool NDFPropertyString::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyString::change_value(NDF_DB *db, int property_id,
+                                     std::string new_value) {
+  auto ret = db->stmt_set_string_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
+}
+
 bool NDFPropertyWideString::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -301,6 +364,13 @@ bool NDFPropertyWideString::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyWideString::change_value(NDF_DB *db, int property_id,
+                                         std::string new_value) {
+  auto ret = db->stmt_set_widestring_value.execute(new_value, property_id);
+  value = new_value;
+  return ret;
 }
 
 bool NDFPropertyF32_vec2::from_ndf_db(NDF_DB *db, int property_id) {
@@ -328,6 +398,15 @@ bool NDFPropertyF32_vec2::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyF32_vec2::change_value(NDF_DB *db, int property_id,
+                                       float new_value_x, float new_value_y) {
+  bool ret = db->stmt_set_F32_vec2_value.execute(new_value_x, new_value_y,
+                                                 property_id);
+  x = new_value_x;
+  y = new_value_y;
+  return ret;
+}
+
 bool NDFPropertyF32_vec3::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -353,6 +432,17 @@ bool NDFPropertyF32_vec3::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyF32_vec3::change_value(NDF_DB *db, int property_id,
+                                       float new_value_x, float new_value_y,
+                                       float new_value_z) {
+  bool ret = db->stmt_set_F32_vec3_value.execute(new_value_x, new_value_y,
+                                                 new_value_z, property_id);
+  x = new_value_x;
+  y = new_value_y;
+  z = new_value_z;
+  return ret;
 }
 
 bool NDFPropertyF32_vec4::from_ndf_db(NDF_DB *db, int property_id) {
@@ -383,6 +473,18 @@ bool NDFPropertyF32_vec4::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyF32_vec4::change_value(NDF_DB *db, int property_id,
+                                       float new_value_x, float new_value_y,
+                                       float new_value_z, float new_value_w) {
+  bool ret = db->stmt_set_F32_vec4_value.execute(
+      new_value_x, new_value_y, new_value_z, new_value_w, property_id);
+  x = new_value_x;
+  y = new_value_y;
+  z = new_value_z;
+  w = new_value_w;
+  return ret;
+}
+
 bool NDFPropertyColor::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -409,6 +511,18 @@ bool NDFPropertyColor::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyColor::change_value(NDF_DB *db, int property_id,
+                                    uint8_t new_value_r, uint8_t new_value_g,
+                                    uint8_t new_value_b, uint8_t new_value_a) {
+  bool ret = db->stmt_set_color_value.execute(
+      new_value_r, new_value_g, new_value_b, new_value_a, property_id);
+  r = new_value_r;
+  g = new_value_g;
+  b = new_value_b;
+  a = new_value_a;
+  return ret;
 }
 
 bool NDFPropertyS32_vec2::from_ndf_db(NDF_DB *db, int property_id) {
@@ -464,55 +578,132 @@ bool NDFPropertyS32_vec3::to_ndf_db(NDF_DB *db, int object_id, int parent,
 
 bool NDFPropertyImportReference::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
-  // get property type for assert only
-  auto value_opt =
-      db->stmt_get_import_reference_value.query_single<std::string>(value_id);
+  auto value_opt = db->stmt_get_import_reference_value
+                       .query_single<std::tuple<int, std::string>>(value_id);
   if (!value_opt) {
+    spdlog::error("Failed to get import reference value");
     return false;
   }
-  import_name = value_opt.value();
+  auto [referenced_object, optional_value] = value_opt.value();
+  if (referenced_object != 0) {
+    // get the export_path from the referenced object_id, needs to exist
+    auto export_path_opt =
+        db->stmt_get_object_export_path.query_single<std::string>(
+            referenced_object);
+    if (!export_path_opt) {
+      spdlog::error(
+          "NDFPropertyImportReference::from_ndf_db: object not found");
+      return false;
+    }
+    import_name = export_path_opt.value();
+  } else {
+    import_name = optional_value;
+  }
   return true;
 }
 
 bool NDFPropertyImportReference::to_ndf_db(NDF_DB *db, int object_id,
                                            int parent, int position) const {
-  // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_import_reference.insert(import_name);
-  if (!value_id) {
-    return -1;
+  // first try to find the object
+  auto object_id_opt =
+      db->stmt_get_object_from_export_path.query_single<int>(import_name);
+  int value_id = 0;
+  if (object_id_opt) {
+    // set referenced value as well
+    auto value_id_opt = db->stmt_insert_ndf_import_reference.insert(
+        object_id_opt.value(), import_name);
+    if (!value_id_opt) {
+      spdlog::error("Failed to insert import reference value");
+      return false;
+    }
+    value_id = value_id_opt.value();
+  } else {
+    // only set optional_value
+    auto value_id_opt =
+        db->stmt_insert_ndf_import_reference.insert(SQLNULL{}, import_name);
+    if (!value_id_opt) {
+      spdlog::error("Failed to insert import reference value");
+      return false;
+    }
+    value_id = value_id_opt.value();
   }
   // note the extra true flag for is_import_reference
-  return add_db_property(db, object_id, parent, position, value_id.value(),
-                         true)
+  return add_db_property(db, object_id, parent, position, value_id, true)
       .has_value();
+}
+
+bool NDFPropertyImportReference::change_value(NDF_DB *db, int property_id,
+                                              std::string new_value) {
+  auto ret =
+      db->stmt_set_import_reference_value.execute(new_value, property_id);
+  import_name = new_value;
+  return ret;
 }
 
 bool NDFPropertyObjectReference::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
-  // get property type for assert only
-  auto value_opt =
-      db->stmt_get_object_reference_value.query_single<std::string>(value_id);
+  auto value_opt = db->stmt_get_object_reference_value
+                       .query_single<std::tuple<int, std::string>>(value_id);
   if (!value_opt) {
+    spdlog::error(
+        "NDFPropertyObjectReference::from_ndf_db: object reference not found");
     return false;
   }
-  object_name = value_opt.value();
+  auto [referenced_object, optional_value] = value_opt.value();
+  if (referenced_object != 0) {
+    // get the object_name from the referenced object_id, needs to exist
+    auto object_name_opt =
+        db->stmt_get_object_name.query_single<std::string>(referenced_object);
+    if (!object_name_opt) {
+      spdlog::error(
+          "NDFPropertyObjectReference::from_ndf_db: object not found");
+      return false;
+    }
+    object_name = object_name_opt.value();
+  } else {
+    object_name = optional_value;
+  }
   return true;
 }
 
 bool NDFPropertyObjectReference::to_ndf_db(NDF_DB *db, int object_id,
                                            int parent, int position) const {
-  // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_object_reference.insert(object_name);
-  if (!value_id) {
-    return -1;
+  // first get the object_id from the object_name
+  auto object_id_opt =
+      db->stmt_get_object_from_name.query_single<int>(object_name);
+  int value_id = 0;
+  if (object_id_opt) {
+    // found object, so insert the reference
+    auto value_id_opt = db->stmt_insert_ndf_object_reference.insert(
+        object_id_opt.value(), object_name);
+    if (!value_id_opt) {
+      return false;
+    }
+    value_id = value_id_opt.value();
+  } else {
+    // object not found, so insert only the optional_value
+    auto value_id_opt =
+        db->stmt_insert_ndf_object_reference.insert(SQLNULL{}, object_name);
+    if (!value_id_opt) {
+      return false;
+    }
+    value_id = value_id_opt.value();
   }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  // we always add the original object_name as optional_value anyway, in case
+  // the object gets deleted
+  return add_db_property(db, object_id, parent, position, value_id).has_value();
+}
+
+bool NDFPropertyObjectReference::change_value(NDF_DB *db, int property_id,
+                                              std::string new_value) {
+  auto ret =
+      db->stmt_set_object_reference_value.execute(new_value, property_id);
+  object_name = new_value;
+  return ret;
 }
 
 bool NDFPropertyGUID::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
-  // get property type for assert only
   auto value_opt = db->stmt_get_GUID_value.query_single<std::string>(value_id);
   if (!value_opt) {
     return false;
@@ -523,13 +714,19 @@ bool NDFPropertyGUID::from_ndf_db(NDF_DB *db, int property_id) {
 
 bool NDFPropertyGUID::to_ndf_db(NDF_DB *db, int object_id, int parent,
                                 int position) const {
-  // insert the value in the bool table
   auto value_id = db->stmt_insert_ndf_GUID.insert(guid);
   if (!value_id) {
     return -1;
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyGUID::change_value(NDF_DB *db, int property_id,
+                                   std::string new_value) {
+  auto ret = db->stmt_set_GUID_value.execute(new_value, property_id);
+  guid = new_value;
+  return ret;
 }
 
 bool NDFPropertyPathReference::from_ndf_db(NDF_DB *db, int property_id) {
@@ -555,6 +752,13 @@ bool NDFPropertyPathReference::to_ndf_db(NDF_DB *db, int object_id, int parent,
       .has_value();
 }
 
+bool NDFPropertyPathReference::change_value(NDF_DB *db, int property_id,
+                                            std::string new_value) {
+  auto ret = db->stmt_set_path_reference_value.execute(new_value, property_id);
+  path = new_value;
+  return ret;
+}
+
 bool NDFPropertyLocalisationHash::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -578,6 +782,14 @@ bool NDFPropertyLocalisationHash::to_ndf_db(NDF_DB *db, int object_id,
       .has_value();
 }
 
+bool NDFPropertyLocalisationHash::change_value(NDF_DB *db, int property_id,
+                                               std::string new_value) {
+  auto ret =
+      db->stmt_set_localisation_hash_value.execute(new_value, property_id);
+  hash = new_value;
+  return ret;
+}
+
 bool NDFPropertyHash::from_ndf_db(NDF_DB *db, int property_id) {
   auto value_id = get_db_property_value(db, property_id);
   // get property type for assert only
@@ -598,6 +810,13 @@ bool NDFPropertyHash::to_ndf_db(NDF_DB *db, int object_id, int parent,
   }
   return add_db_property(db, object_id, parent, position, value_id.value())
       .has_value();
+}
+
+bool NDFPropertyHash::change_value(NDF_DB *db, int property_id,
+                                   std::string new_value) {
+  auto ret = db->stmt_set_hash_value.execute(new_value, property_id);
+  hash = new_value;
+  return ret;
 }
 
 bool NDFPropertyList::from_ndf_db(NDF_DB *db, int property_id) {
