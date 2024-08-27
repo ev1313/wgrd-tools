@@ -9,24 +9,36 @@
 
 namespace fs = std::filesystem;
 
+#define ndf_property_simple_def(NAME, DATATYPE)                                \
+  SQLStatement<1, 0> stmt_insert_ndf_##NAME;                                   \
+  SQLStatement<1, 1> stmt_get_##NAME##_value;                                  \
+  SQLStatement<2, 0> stmt_set_##NAME##_value;                                  \
+  SQLStatement<1, 1> stmt_get_distinct_##NAME##_value;
+
 class NDF_DB {
 private:
   sqlite3 *db;
+  // simple properties
+  ndf_property_simple_def(bool, BOOLEAN);
+  ndf_property_simple_def(uint8, INTEGER);
+  ndf_property_simple_def(int8, INTEGER);
+  ndf_property_simple_def(uint16, INTEGER);
+  ndf_property_simple_def(int16, INTEGER);
+  ndf_property_simple_def(uint32, INTEGER);
+  ndf_property_simple_def(int32, INTEGER);
+  ndf_property_simple_def(float32, REAL);
+  ndf_property_simple_def(float64, REAL);
+  ndf_property_simple_def(string, TEXT);
+  ndf_property_simple_def(widestring, TEXT);
+  ndf_property_simple_def(path_reference, TEXT);
+  ndf_property_simple_def(GUID, TEXT);
+  ndf_property_simple_def(localisation_hash, TEXT);
+  ndf_property_simple_def(hash, TEXT);
+
   // insertion statements
   SQLStatement<5, 0> stmt_insert_ndf_file;
   SQLStatement<5, 0> stmt_insert_ndf_object;
   SQLStatement<8, 0> stmt_insert_ndf_property;
-  SQLStatement<1, 0> stmt_insert_ndf_bool;
-  SQLStatement<1, 0> stmt_insert_ndf_int8;
-  SQLStatement<1, 0> stmt_insert_ndf_uint8;
-  SQLStatement<1, 0> stmt_insert_ndf_int16;
-  SQLStatement<1, 0> stmt_insert_ndf_uint16;
-  SQLStatement<1, 0> stmt_insert_ndf_int32;
-  SQLStatement<1, 0> stmt_insert_ndf_uint32;
-  SQLStatement<1, 0> stmt_insert_ndf_float32;
-  SQLStatement<1, 0> stmt_insert_ndf_float64;
-  SQLStatement<1, 0> stmt_insert_ndf_string;
-  SQLStatement<1, 0> stmt_insert_ndf_widestring;
   SQLStatement<2, 0> stmt_insert_ndf_F32_vec2;
   SQLStatement<3, 0> stmt_insert_ndf_F32_vec3;
   SQLStatement<4, 0> stmt_insert_ndf_F32_vec4;
@@ -36,10 +48,6 @@ private:
   SQLStatement<4, 0> stmt_insert_ndf_color;
   SQLStatement<2, 0> stmt_insert_ndf_object_reference;
   SQLStatement<2, 0> stmt_insert_ndf_import_reference;
-  SQLStatement<1, 0> stmt_insert_ndf_GUID;
-  SQLStatement<1, 0> stmt_insert_ndf_path_reference;
-  SQLStatement<1, 0> stmt_insert_ndf_localisation_hash;
-  SQLStatement<1, 0> stmt_insert_ndf_hash;
   // accessors for objects
   SQLStatement<1, 1> stmt_get_object_from_name;
   SQLStatement<1, 1> stmt_get_object_from_export_path;
@@ -53,17 +61,6 @@ private:
   SQLStatement<1, 1> stmt_get_property_names;
   SQLStatement<1, 8> stmt_get_property;
   // accessors for values, should only return a single row each
-  SQLStatement<1, 1> stmt_get_bool_value;
-  SQLStatement<1, 1> stmt_get_int8_value;
-  SQLStatement<1, 1> stmt_get_uint8_value;
-  SQLStatement<1, 1> stmt_get_int16_value;
-  SQLStatement<1, 1> stmt_get_uint16_value;
-  SQLStatement<1, 1> stmt_get_int32_value;
-  SQLStatement<1, 1> stmt_get_uint32_value;
-  SQLStatement<1, 1> stmt_get_float32_value;
-  SQLStatement<1, 1> stmt_get_float64_value;
-  SQLStatement<1, 1> stmt_get_string_value;
-  SQLStatement<1, 1> stmt_get_widestring_value;
   SQLStatement<1, 2> stmt_get_F32_vec2_value;
   SQLStatement<1, 3> stmt_get_F32_vec3_value;
   SQLStatement<1, 4> stmt_get_F32_vec4_value;
@@ -73,10 +70,6 @@ private:
   SQLStatement<1, 4> stmt_get_color_value;
   SQLStatement<1, 2> stmt_get_object_reference_value;
   SQLStatement<1, 2> stmt_get_import_reference_value;
-  SQLStatement<1, 1> stmt_get_GUID_value;
-  SQLStatement<1, 1> stmt_get_path_reference_value;
-  SQLStatement<1, 1> stmt_get_localisation_hash_value;
-  SQLStatement<1, 1> stmt_get_hash_value;
   // accessor used by lists, maps and pairs, returns all associated property ids
   // in order
   SQLStatement<1, 1> stmt_get_list_items;
@@ -84,17 +77,6 @@ private:
   SQLStatement<1, 1> stmt_get_objects_importing;
 
   // update statements
-  SQLStatement<2, 0> stmt_set_bool_value;
-  SQLStatement<2, 0> stmt_set_uint8_value;
-  SQLStatement<2, 0> stmt_set_int8_value;
-  SQLStatement<2, 0> stmt_set_uint16_value;
-  SQLStatement<2, 0> stmt_set_int16_value;
-  SQLStatement<2, 0> stmt_set_uint32_value;
-  SQLStatement<2, 0> stmt_set_int32_value;
-  SQLStatement<2, 0> stmt_set_float32_value;
-  SQLStatement<2, 0> stmt_set_float64_value;
-  SQLStatement<2, 0> stmt_set_string_value;
-  SQLStatement<2, 0> stmt_set_widestring_value;
   SQLStatement<3, 0> stmt_set_F32_vec2_value;
   SQLStatement<4, 0> stmt_set_F32_vec3_value;
   SQLStatement<5, 0> stmt_set_F32_vec4_value;
@@ -104,10 +86,6 @@ private:
   SQLStatement<5, 0> stmt_set_color_value;
   SQLStatement<2, 0> stmt_set_import_reference_value;
   SQLStatement<2, 0> stmt_set_object_reference_value;
-  SQLStatement<2, 0> stmt_set_GUID_value;
-  SQLStatement<2, 0> stmt_set_path_reference_value;
-  SQLStatement<2, 0> stmt_set_localisation_hash_value;
-  SQLStatement<2, 0> stmt_set_hash_value;
   // object update statements
   SQLStatement<2, 0> stmt_set_object_name;
   SQLStatement<2, 0> stmt_set_object_export_path;

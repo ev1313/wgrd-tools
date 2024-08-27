@@ -13,13 +13,21 @@ bool create_table(sqlite3 *db, const char *query) {
   return true;
 }
 
-#define ndf_property_simple(NAME)                                              \
+#define ndf_property_simple(NAME, DATATYPE)                                    \
+  create_table(db, R"( CREATE TABLE ndf_)" #NAME                               \
+                   R"((id INTEGER PRIMARY KEY AUTOINCREMENT,value )" #DATATYPE \
+                   R"(); )");                                                  \
   stmt_insert_ndf_##NAME.init(db, R"( INSERT INTO ndf_)" #NAME                 \
                                   R"( (value) VALUES (?); )");                 \
   stmt_get_##NAME##_value.init(db, R"( SELECT value FROM ndf_)" #NAME          \
                                    R"( WHERE id=?; )");                        \
   stmt_set_##NAME##_value.init(db, R"( UPDATE ndf_)" #NAME                     \
-                                   R"( SET value=? WHERE id=?; )");
+                                   R"( SET value=? WHERE id=?; )");            \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, R"( SELECT DISTINCT ndf_)" #NAME R"(.value FROM ndf_)" #NAME         \
+          R"( INNER JOIN ndf_property ON ndf_property.value=ndf_)" #NAME       \
+          R"(.id WHERE ndf_property.object_id=? ORDER BY ndf_)" #NAME          \
+          R"(.value;)");
 
 bool NDF_DB::init_statements() {
   create_table(db,
@@ -34,12 +42,11 @@ bool NDF_DB::init_statements() {
   create_table(db,
                R"( CREATE TABLE ndf_object(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          ndf_id INTEGER NOT NULL,
+                                          ndf_id INTEGER NOT NULL REFERENCES ndf_file(id) ON UPDATE CASCADE ON DELETE CASCADE,
                                           object_name TEXT,
                                           class_name TEXT,
                                           export_path TEXT,
-                                          is_top_object BOOLEAN,
-                                          FOREIGN KEY (ndf_id) REFERENCES ndf_file(id) ON UPDATE CASCADE ON DELETE CASCADE
+                                          is_top_object BOOLEAN
                                           ); )");
   create_table(db,
                R"( CREATE TABLE ndf_property(
@@ -54,60 +61,6 @@ bool NDF_DB::init_statements() {
                                             value INTEGER
                                             ); )");
 
-  create_table(db,
-               R"( CREATE TABLE ndf_bool(
-                                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                          value BOOLEAN
-                                                          ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_int8(
-                                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                          value INTEGER
-                                                          ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_uint8(
-                                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                           value INTEGER
-                                                           ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_int16(
-                                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                           value INTEGER
-                                                           ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_uint16(
-                                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                   value INTEGER
-                                   ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_int32(
-                                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                           value INTEGER
-                                                           ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_uint32(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value INTEGER
-                                          ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_float32(
-                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                           value REAL
-                                           ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_float64(
-                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                           value REAL
-                                           ); )");
-  create_table(db, R"( CREATE TABLE ndf_string(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value TEXT
-                                          ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_widestring(
-                                              id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                              value TEXT
-                                              ); )");
   create_table(db,
                R"( CREATE TABLE ndf_F32_vec2(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,28 +123,22 @@ bool NDF_DB::init_statements() {
                                                     referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
                                                     optional_value TEXT
                                                     ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_GUID(
-                                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                          value TEXT
-                                                          ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_path_reference(
-                                                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                  value TEXT
-                                                  ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_localisation_hash(
-                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                     value TEXT
-                                                     ); )");
-  create_table(db,
-               R"( CREATE TABLE ndf_hash(
-                                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                          value TEXT
-                                                          ); )");
 
-  ndf_property_simple(bool);
+  ndf_property_simple(bool, BOOLEAN);
+  ndf_property_simple(uint8, INTEGER);
+  ndf_property_simple(int8, INTEGER);
+  ndf_property_simple(uint16, INTEGER);
+  ndf_property_simple(int16, INTEGER);
+  ndf_property_simple(uint32, INTEGER);
+  ndf_property_simple(int32, INTEGER);
+  ndf_property_simple(float32, REAL);
+  ndf_property_simple(float64, REAL);
+  ndf_property_simple(string, TEXT);
+  ndf_property_simple(widestring, TEXT);
+  ndf_property_simple(path_reference, TEXT);
+  ndf_property_simple(GUID, TEXT);
+  ndf_property_simple(localisation_hash, TEXT);
+  ndf_property_simple(hash, TEXT);
 
   // inserters
   stmt_insert_ndf_file.init(
@@ -203,28 +150,6 @@ bool NDF_DB::init_statements() {
   stmt_insert_ndf_property.init(
       db,
       R"( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, is_import_reference, value) VALUES (?,?,?,?,?,?,?,?); )");
-  // stmt_insert_ndf_bool.init(
-  //     db, R"( INSERT INTO ndf_bool (value) VALUES (?); )");
-  stmt_insert_ndf_int8.init(db,
-                            R"( INSERT INTO ndf_int8 (value) VALUES (?); )");
-  stmt_insert_ndf_uint8.init(db,
-                             R"( INSERT INTO ndf_uint8 (value) VALUES (?); )");
-  stmt_insert_ndf_int16.init(db,
-                             R"( INSERT INTO ndf_int16 (value) VALUES (?); )");
-  stmt_insert_ndf_uint16.init(
-      db, R"( INSERT INTO ndf_uint16 (value) VALUES (?); )");
-  stmt_insert_ndf_int32.init(db,
-                             R"( INSERT INTO ndf_int32 (value) VALUES (?); )");
-  stmt_insert_ndf_uint32.init(
-      db, R"( INSERT INTO ndf_uint32 (value) VALUES (?); )");
-  stmt_insert_ndf_float32.init(
-      db, R"( INSERT INTO ndf_float32 (value) VALUES (?); )");
-  stmt_insert_ndf_float64.init(
-      db, R"( INSERT INTO ndf_float64 (value) VALUES (?); )");
-  stmt_insert_ndf_string.init(
-      db, R"( INSERT INTO ndf_string (value) VALUES (?); )");
-  stmt_insert_ndf_widestring.init(
-      db, R"( INSERT INTO ndf_widestring (value) VALUES (?); )");
   stmt_insert_ndf_F32_vec2.init(
       db, R"( INSERT INTO ndf_F32_vec2 (value_x, value_y) VALUES (?,?); )");
   stmt_insert_ndf_F32_vec3.init(
@@ -250,12 +175,6 @@ bool NDF_DB::init_statements() {
   stmt_insert_ndf_import_reference.init(
       db,
       R"( INSERT INTO ndf_import_reference (referenced_object, optional_value) VALUES (?,?); )");
-  stmt_insert_ndf_GUID.init(db,
-                            R"( INSERT INTO ndf_GUID (value) VALUES (?); )");
-  stmt_insert_ndf_localisation_hash.init(
-      db, R"( INSERT INTO ndf_localisation_hash (value) VALUES (?); )");
-  stmt_insert_ndf_hash.init(db,
-                            R"( INSERT INTO ndf_hash (value) VALUES (?); )");
 
   // accessors
   stmt_get_object_from_name.init(
@@ -287,24 +206,6 @@ bool NDF_DB::init_statements() {
       R"( SELECT object_id, property_name, property_index, parent, position, type, is_import_reference, value FROM ndf_property WHERE id=?; )");
 
   // value accessors
-  // stmt_get_bool_value.init(
-  //    db, R"( SELECT value FROM ndf_bool WHERE id=?; )");
-  stmt_get_int8_value.init(db, R"( SELECT value FROM ndf_int8 WHERE id=?; )");
-  stmt_get_uint8_value.init(db, R"( SELECT value FROM ndf_uint8 WHERE id=?; )");
-  stmt_get_int16_value.init(db, R"( SELECT value FROM ndf_int16 WHERE id=?; )");
-  stmt_get_uint16_value.init(db,
-                             R"( SELECT value FROM ndf_uint16 WHERE id=?; )");
-  stmt_get_int32_value.init(db, R"( SELECT value FROM ndf_int32 WHERE id=?; )");
-  stmt_get_uint32_value.init(db,
-                             R"( SELECT value FROM ndf_uint32 WHERE id=?; )");
-  stmt_get_float32_value.init(db,
-                              R"( SELECT value FROM ndf_float32 WHERE id=?; )");
-  stmt_get_float64_value.init(db,
-                              R"( SELECT value FROM ndf_float64 WHERE id=?; )");
-  stmt_get_string_value.init(db,
-                             R"( SELECT value FROM ndf_string WHERE id=?; )");
-  stmt_get_widestring_value.init(
-      db, R"( SELECT value FROM ndf_widestring WHERE id=?; )");
   stmt_get_F32_vec2_value.init(
       db, R"( SELECT value_x, value_y FROM ndf_F32_vec2 WHERE id=?; )");
   stmt_get_F32_vec3_value.init(
@@ -330,12 +231,6 @@ bool NDF_DB::init_statements() {
   stmt_get_import_reference_value.init(
       db,
       R"( SELECT referenced_object, optional_value FROM ndf_import_reference WHERE id=?; )");
-  stmt_get_GUID_value.init(db, R"( SELECT value FROM ndf_GUID WHERE id=?; )");
-  stmt_get_path_reference_value.init(
-      db, R"( SELECT value FROM ndf_path_reference WHERE id=?; )");
-  stmt_get_localisation_hash_value.init(
-      db, R"( SELECT value FROM ndf_localisation_hash WHERE id=?; )");
-  stmt_get_hash_value.init(db, R"( SELECT value FROM ndf_hash WHERE id=?; )");
   // used by list, map and pair
   stmt_get_list_items.init(
       db, R"( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )");
@@ -347,27 +242,6 @@ bool NDF_DB::init_statements() {
       R"( SELECT DISTINCT prop.object_id FROM ndf_import_reference AS ref INNER JOIN ndf_property AS prop ON prop.value=ref.id WHERE ref.referenced_object=?; )");
 
   // change values
-  // stmt_set_bool_value.init(
-  //    db, R"( UPDATE ndf_bool SET value=? WHERE id=?; )");
-  stmt_set_int8_value.init(db, R"( UPDATE ndf_int8 SET value=? WHERE id=?; )");
-  stmt_set_uint8_value.init(db,
-                            R"( UPDATE ndf_uint8 SET value=? WHERE id=?; )");
-  stmt_set_int16_value.init(db,
-                            R"( UPDATE ndf_int16 SET value=? WHERE id=?; )");
-  stmt_set_uint16_value.init(db,
-                             R"( UPDATE ndf_uint16 SET value=? WHERE id=?; )");
-  stmt_set_int32_value.init(db,
-                            R"( UPDATE ndf_int32 SET value=? WHERE id=?; )");
-  stmt_set_uint32_value.init(db,
-                             R"( UPDATE ndf_uint32 SET value=? WHERE id=?; )");
-  stmt_set_float32_value.init(
-      db, R"( UPDATE ndf_float32 SET value=? WHERE id=?; )");
-  stmt_set_float64_value.init(
-      db, R"( UPDATE ndf_float64 SET value=? WHERE id=?; )");
-  stmt_set_string_value.init(db,
-                             R"( UPDATE ndf_string SET value=? WHERE id=?; )");
-  stmt_set_widestring_value.init(
-      db, R"( UPDATE ndf_widestring SET value=? WHERE id=?; )");
   stmt_set_F32_vec2_value.init(
       db, R"( UPDATE ndf_F32_vec2 SET value_x=?, value_y=? WHERE id=?; )");
   stmt_set_F32_vec3_value.init(
@@ -393,12 +267,6 @@ bool NDF_DB::init_statements() {
   stmt_set_import_reference_value.init(
       db,
       R"( UPDATE ndf_import_reference SET referenced_object=?,optional_value=? WHERE id=?; )");
-  stmt_set_GUID_value.init(db, R"( UPDATE ndf_GUID SET value=? WHERE id=?; )");
-  stmt_set_path_reference_value.init(
-      db, R"( UPDATE ndf_path_reference SET value=? WHERE id=?; )");
-  stmt_set_localisation_hash_value.init(
-      db, R"( UPDATE ndf_localisation_hash SET value=? WHERE id=?; )");
-  stmt_set_hash_value.init(db, R"( UPDATE ndf_hash SET value=? WHERE id=?; )");
   // object updates
   stmt_set_object_name.init(
       db, R"( UPDATE ndf_object SET object_name=? WHERE id=?; )");
