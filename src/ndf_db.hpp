@@ -46,6 +46,7 @@ private:
   SQLStatement<1, 1> stmt_get_object_ndf_id;
   SQLStatement<1, 1> stmt_get_object_name;
   SQLStatement<1, 1> stmt_get_object_names;
+  SQLStatement<1, 1> stmt_get_object_class_names;
   SQLStatement<1, 1> stmt_get_object_export_path;
   SQLStatement<1, 5> stmt_get_object;
   SQLStatement<1, 1> stmt_get_object_properties;
@@ -79,6 +80,8 @@ private:
   // accessor used by lists, maps and pairs, returns all associated property ids
   // in order
   SQLStatement<1, 1> stmt_get_list_items;
+  SQLStatement<1, 1> stmt_get_objects_referencing;
+  SQLStatement<1, 1> stmt_get_objects_importing;
 
   // update statements
   SQLStatement<2, 0> stmt_set_bool_value;
@@ -111,6 +114,8 @@ private:
   // fix references, to be called after inserting objects
   SQLStatement<1, 0> stmt_update_object_references;
   SQLStatement<0, 0> stmt_update_import_references;
+  // delete statements
+  SQLStatement<0, 0> stmt_delete_ndf_file;
 
   bool init_statements();
 

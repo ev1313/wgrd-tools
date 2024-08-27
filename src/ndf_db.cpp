@@ -259,6 +259,9 @@ bool NDF_DB::init_statements() {
       db, R"rstr( SELECT object_name FROM ndf_object WHERE id=?; )rstr");
   stmt_get_object_names.init(
       db, R"rstr( SELECT object_name FROM ndf_object WHERE ndf_id=?; )rstr");
+  stmt_get_object_class_names.init(
+      db,
+      R"rstr( SELECT DISTINCT class_name FROM ndf_object WHERE ndf_id=?; )rstr");
   stmt_get_object_export_path.init(
       db, R"rstr( SELECT export_path FROM ndf_object WHERE id=?; )rstr");
   stmt_get_object.init(
@@ -335,6 +338,12 @@ bool NDF_DB::init_statements() {
   stmt_get_list_items.init(
       db,
       R"rstr( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )rstr");
+  stmt_get_objects_referencing.init(
+      db,
+      R"rstr( SELECT DISTINCT prop.object_id FROM ndf_object_reference AS ref INNER JOIN ndf_property AS prop ON prop.value_id=ref.id WHERE ref.referenced_object=?; )rstr");
+  stmt_get_objects_importing.init(
+      db,
+      R"rstr( SELECT DISTINCT prop.object_id FROM ndf_import_reference AS ref INNER JOIN ndf_property AS prop ON prop.value_id=ref.id WHERE ref.referenced_object=?; )rstr");
 
   // change values
   stmt_set_bool_value.init(
@@ -415,6 +424,10 @@ bool NDF_DB::init_statements() {
                                              AND optional_value=ndf_object.export_path
                                              AND (ndf_object.ndf_id) IN
                                              (SELECT id FROM ndf_file WHERE is_current=True); )rstr");
+
+  // delete file
+  stmt_delete_ndf_file.init(db,
+                            R"rstr( DELETE FROM ndf_file WHERE id=?; )rstr");
 
   return true;
 }
