@@ -21,6 +21,7 @@ public:
     ndf_generator::create_test_files(directory);
   }
   ~PyFixture() {
+    // FIXME
     // fs::remove_all(directory);
   }
 };

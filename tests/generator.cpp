@@ -28,22 +28,31 @@ void ndf_generator::add_random_object(NDF &ndf) {
 
   ndf.add_object(std::move(obj));
 }
-
-void ndf_generator::add_random_uint8(NDFObject &obj) {
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_uint8(int idx) {
   auto prop = std::make_unique<NDFPropertyUInt8>();
-  prop->property_idx = obj.properties.size();
+  prop->property_idx = idx;
   prop->property_type = NDFPropertyType::UInt8;
   prop->property_name = std::format("TestUInt8_{}", prop->property_idx);
   prop->value = std::experimental::randint(0, 255);
+  return prop;
+}
+
+void ndf_generator::add_random_uint8(NDFObject &obj) {
+  auto prop = gen_random_uint8(obj.properties.size());
   obj.properties.push_back(std::move(prop));
 }
 
-void ndf_generator::add_random_uint16(NDFObject &obj) {
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_uint16(int idx) {
   auto prop = std::make_unique<NDFPropertyUInt16>();
-  prop->property_idx = obj.properties.size();
+  prop->property_idx = idx;
   prop->property_type = NDFPropertyType::UInt16;
   prop->property_name = std::format("TestUInt16_{}", prop->property_idx);
-  prop->value = std::experimental::randint(0, 65535);
+  prop->value = std::experimental::randint((uint16_t)0, (uint16_t)UINT16_MAX);
+  return prop;
+}
+
+void ndf_generator::add_random_uint16(NDFObject &obj) {
+  auto prop = gen_random_uint16(obj.properties.size());
   obj.properties.push_back(std::move(prop));
 }
 
@@ -52,7 +61,7 @@ std::unique_ptr<NDFProperty> ndf_generator::gen_random_uint32(int idx) {
   prop->property_idx = idx;
   prop->property_type = NDFPropertyType::UInt32;
   prop->property_name = std::format("TestUInt32_{}", prop->property_idx);
-  prop->value = std::experimental::randint((int)0, (int)INT_MAX);
+  prop->value = std::experimental::randint((uint32_t)0, (uint32_t)UINT32_MAX);
   return prop;
 }
 
@@ -61,11 +70,25 @@ void ndf_generator::add_random_uint32(NDFObject &obj) {
   obj.properties.push_back(std::move(prop));
 }
 
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_int32(int idx) {
+  auto prop = std::make_unique<NDFPropertyUInt32>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::Int32;
+  prop->property_name = std::format("TestInt32_{}", prop->property_idx);
+  prop->value = std::experimental::randint((int)INT32_MIN, (int)INT32_MAX);
+  return prop;
+}
+
+void ndf_generator::add_random_int32(NDFObject &obj) {
+  auto prop = gen_random_uint32(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
 std::unique_ptr<NDFProperty> ndf_generator::gen_random_list(int idx) {
   auto prop = std::make_unique<NDFPropertyList>();
   prop->property_idx = idx;
   prop->property_type = NDFPropertyType::UInt32;
-  prop->property_name = std::format("TestUInt32_{}", prop->property_idx);
+  prop->property_name = std::format("TestList_{}", prop->property_idx);
 
   for (int i = 0; i < 10; i++) {
     auto item = gen_random_uint32(-1);
@@ -75,7 +98,26 @@ std::unique_ptr<NDFProperty> ndf_generator::gen_random_list(int idx) {
 }
 
 void ndf_generator::add_random_list(NDFObject &obj) {
-  auto prop = gen_random_uint32(obj.properties.size());
+  auto prop = gen_random_list(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_map(int idx) {
+  auto prop = std::make_unique<NDFPropertyMap>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::UInt32;
+  prop->property_name = std::format("TestMap_{}", prop->property_idx);
+
+  for (int i = 0; i < 10; i++) {
+    auto key = gen_random_uint32(-1);
+    auto value = gen_random_int32(-1);
+    prop->values.push_back({std::move(key), std::move(value)});
+  }
+  return prop;
+}
+
+void ndf_generator::add_random_map(NDFObject &obj) {
+  auto prop = gen_random_map(obj.properties.size());
   obj.properties.push_back(std::move(prop));
 }
 

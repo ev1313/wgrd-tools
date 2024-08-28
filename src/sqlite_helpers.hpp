@@ -81,7 +81,7 @@ private:
       static_assert(false, "Unsupported type!");
     }
     if (rc != SQLITE_OK) {
-      spdlog::error("Failed to bind value: {}",
+      spdlog::error("Failed to bind value {}: {}", m_index,
                     sqlite3_errmsg(sqlite3_db_handle(stmt)));
       return false;
     }
@@ -305,5 +305,20 @@ public:
 
       return std::move(col);
     }
+  }
+};
+
+class SQLTransaction {
+private:
+  sqlite3 *db;
+
+public:
+  SQLTransaction(sqlite3 *db) {
+    this->db = db;
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+  }
+  void rollback() { sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, nullptr); }
+  ~SQLTransaction() {
+    sqlite3_exec(db, "END TRANSACTION;", nullptr, nullptr, nullptr);
   }
 };

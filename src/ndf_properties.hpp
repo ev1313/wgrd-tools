@@ -2,6 +2,7 @@
 
 #include "spdlog/spdlog.h"
 #include <memory>
+#include <optional>
 #include <pugixml.hpp>
 #include <string>
 #include <unordered_map>
@@ -44,6 +45,15 @@ enum NDFPropertyType : uint32_t {
 class NDF_DB;
 
 struct NDFProperty {
+  // db stuff
+  size_t db_object_id = 0;
+  // used for properties in lists/maps/pairs only
+  std::optional<size_t> db_parent = std::nullopt;
+  // only relevant together with db_parent
+  std::optional<size_t> db_position = std::nullopt;
+  // is NULL for list/map/pair properties
+  std::optional<size_t> db_value_id = std::nullopt;
+  //
   uint32_t property_idx;
   uint32_t property_type;
   std::string property_name;
@@ -69,17 +79,17 @@ struct NDFProperty {
   virtual void to_ndfbin(NDF *, std::ostream &) const {
     throw std::runtime_error("Not implemented");
   }
-  virtual bool to_ndf_db(NDF_DB *, int, int = -1, int = -1) const {
+  virtual bool to_ndf_db(NDF_DB *) {
     throw std::runtime_error("Not implemented");
   }
   virtual bool from_ndf_db(NDF_DB *, int) {
     throw std::runtime_error("Not implemented");
   }
-  virtual bool is_object_reference() { return false; }
-  virtual bool is_import_reference() { return false; }
-  virtual bool is_list() { return false; }
-  virtual bool is_map() { return false; }
-  virtual bool is_pair() { return false; }
+  virtual bool is_object_reference() const { return false; }
+  virtual bool is_import_reference() const { return false; }
+  virtual bool is_list() const { return false; }
+  virtual bool is_map() const { return false; }
+  virtual bool is_pair() const { return false; }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
   virtual void fix_references(const std::string &, const std::string &) {}
   virtual void
@@ -92,9 +102,7 @@ struct NDFProperty {
   int get_db_property_value(NDF_DB *db, int property_id);
   static std::unique_ptr<NDFProperty>
   get_db_property_type(NDF_DB *db, int prop_id, int pos = -1);
-  std::optional<int> add_db_property(NDF_DB *db, int object_id, int parent,
-                                     int position, int value_id,
-                                     bool is_import_reference = false) const;
+  std::optional<int> add_db_property(NDF_DB *db) const;
 };
 
 struct NDFPropertyBool : NDFProperty {
@@ -108,8 +116,7 @@ struct NDFPropertyBool : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, bool new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -128,8 +135,7 @@ struct NDFPropertyUInt8 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, uint8_t new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -149,8 +155,7 @@ struct NDFPropertyInt16 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, int16_t new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -170,8 +175,7 @@ struct NDFPropertyUInt16 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, uint16_t new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -191,8 +195,7 @@ struct NDFPropertyInt32 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, int32_t new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -212,8 +215,7 @@ struct NDFPropertyUInt32 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, uint32_t new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -233,8 +235,7 @@ struct NDFPropertyFloat32 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, float new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -254,8 +255,7 @@ struct NDFPropertyFloat64 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, double new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -275,8 +275,7 @@ struct NDFPropertyString : NDFProperty {
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -295,8 +294,7 @@ struct NDFPropertyWideString : NDFProperty {
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -317,8 +315,7 @@ struct NDFPropertyF32_vec2 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, float new_value_x,
                     float new_value_y);
 
@@ -341,8 +338,7 @@ struct NDFPropertyF32_vec3 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, float new_value_x,
                     float new_value_y, float new_value_z);
 
@@ -368,8 +364,7 @@ struct NDFPropertyF32_vec4 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, float new_value_x,
                     float new_value_y, float new_value_z, float new_value_w);
 
@@ -395,8 +390,7 @@ struct NDFPropertyColor : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, uint8_t new_value_r,
                     uint8_t new_value_g, uint8_t new_value_b,
                     uint8_t new_value_a);
@@ -421,8 +415,7 @@ struct NDFPropertyS32_vec2 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, int32_t new_value_x,
                     int32_t new_value_y);
 
@@ -445,8 +438,7 @@ struct NDFPropertyS32_vec3 : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, int32_t new_value_x,
                     int32_t new_value_y, int32_t new_value_z);
 
@@ -469,7 +461,7 @@ struct NDFPropertyObjectReference : NDFProperty {
   void to_ndf_xml(pugi::xml_node &node) const override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_object_reference() override { return true; }
+  bool is_object_reference() const override { return true; }
   void fix_references(const std::string &old_name,
                       const std::string &new_name) override {
     if (object_name == old_name) {
@@ -490,8 +482,7 @@ struct NDFPropertyObjectReference : NDFProperty {
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -509,7 +500,7 @@ struct NDFPropertyImportReference : NDFProperty {
   void to_ndf_xml(pugi::xml_node &node) const override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_import_reference() override { return true; }
+  bool is_import_reference() const override { return true; }
   std::unordered_set<std::string> get_import_references() override {
     return {import_name};
   }
@@ -518,8 +509,7 @@ struct NDFPropertyImportReference : NDFProperty {
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -535,7 +525,7 @@ struct NDFPropertyList : NDFProperty {
   void to_ndf_xml(pugi::xml_node &node) const override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_list() override { return true; }
+  bool is_list() const override { return true; }
   void fix_references(const std::string &old_name,
                       const std::string &new_name) override {
     for (auto &value : values) {
@@ -569,8 +559,7 @@ struct NDFPropertyList : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyList>();
@@ -596,7 +585,7 @@ struct NDFPropertyMap : NDFProperty {
   void to_ndf_xml(pugi::xml_node &node) const override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_map() override { return true; }
+  bool is_map() const override { return true; }
   void fix_references(const std::string &old_name,
                       const std::string &new_name) override {
     for (auto const &[key, value] : values) {
@@ -636,8 +625,7 @@ struct NDFPropertyMap : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyMap>();
@@ -666,8 +654,7 @@ struct NDFPropertyGUID : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -687,8 +674,7 @@ struct NDFPropertyPathReference : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -711,8 +697,7 @@ struct NDFPropertyLocalisationHash : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -733,8 +718,7 @@ struct NDFPropertyHash : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &stream) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
   bool change_value(NDF_DB *db, int property_id, std::string new_value);
 
   std::unique_ptr<NDFProperty> get_copy() override {
@@ -751,7 +735,7 @@ struct NDFPropertyPair : NDFProperty {
   void to_ndf_xml(pugi::xml_node &node) const override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_pair() override { return true; }
+  bool is_pair() const override { return true; }
   void fix_references(const std::string &old_name,
                       const std::string &new_name) override {
     first->fix_references(old_name, new_name);
@@ -783,8 +767,7 @@ struct NDFPropertyPair : NDFProperty {
   void to_ndfbin(NDF *, std::ostream &) const override;
 
   bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db, int object_id, int parent = -1,
-                 int position = -1) const override;
+  bool to_ndf_db(NDF_DB *db) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyPair>();

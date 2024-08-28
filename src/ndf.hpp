@@ -92,6 +92,8 @@ public:
 
 struct NDF {
 private:
+  std::unordered_map<uint32_t, std::vector<NDFProperty *>> db_property_map;
+
 public:
   std::map<unsigned int, std::string> import_name_table;
   std::vector<std::string> string_table;
@@ -105,7 +107,7 @@ public:
                   std::vector<std::string> current_import_path);
   void load_exprs(std::istream &stream,
                   std::vector<std::string> current_export_path);
-  void load_from_ndf_xml(fs::path path);
+  void load_from_ndf_xml(fs::path path, NDF_DB *db, int ndf_id);
 
   void add_object(NDFObject object) {
     object_map.insert({object.name, std::move(object)});

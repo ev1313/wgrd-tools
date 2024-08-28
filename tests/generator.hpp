@@ -11,12 +11,18 @@ namespace ndf_generator {
 NDFObject gen_random_object();
 
 void add_random_object(NDF &ndf);
+std::unique_ptr<NDFProperty> gen_random_uint8(int idx);
 void add_random_uint8(NDFObject &obj);
+std::unique_ptr<NDFProperty> gen_random_uint16(int idx);
 void add_random_uint16(NDFObject &obj);
 std::unique_ptr<NDFProperty> gen_random_uint32(int idx);
 void add_random_uint32(NDFObject &obj);
+std::unique_ptr<NDFProperty> gen_random_int32(int idx);
+void add_random_int32(NDFObject &obj);
 std::unique_ptr<NDFProperty> gen_random_list(int idx);
 void add_random_list(NDFObject &obj);
+std::unique_ptr<NDFProperty> gen_random_map(int idx);
+void add_random_map(NDFObject &obj);
 std::unique_ptr<NDFProperty> gen_object_reference(int idx, std::string ref);
 void add_object_reference(NDFObject &obj, std::string ref);
 std::unique_ptr<NDFProperty> gen_import_reference(int idx, std::string ref);

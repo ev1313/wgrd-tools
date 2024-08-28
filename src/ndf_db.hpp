@@ -4,6 +4,7 @@
 #include "sqlite3.h"
 #include "sqlite_helpers.hpp"
 #include <filesystem>
+#include <unordered_set>
 
 #include "ndf.hpp"
 
@@ -17,7 +18,7 @@ namespace fs = std::filesystem;
 
 class NDF_DB {
 private:
-  sqlite3 *db;
+  sqlite3 *db = nullptr;
   // simple properties
   ndf_property_simple_def(bool, BOOLEAN);
   ndf_property_simple_def(uint8, INTEGER);
@@ -48,6 +49,8 @@ private:
   SQLStatement<4, 0> stmt_insert_ndf_color;
   SQLStatement<2, 0> stmt_insert_ndf_object_reference;
   SQLStatement<2, 0> stmt_insert_ndf_import_reference;
+  // accessor for files
+  SQLStatement<2, 1> stmt_get_file_from_paths;
   // accessors for objects
   SQLStatement<1, 1> stmt_get_object_from_name;
   SQLStatement<1, 1> stmt_get_object_from_export_path;
@@ -93,7 +96,7 @@ private:
   SQLStatement<1, 0> stmt_update_object_references;
   SQLStatement<0, 0> stmt_update_import_references;
   // delete statements
-  SQLStatement<0, 0> stmt_delete_ndf_file;
+  SQLStatement<1, 0> stmt_delete_ndf_file;
 
   bool init_statements();
 
@@ -126,14 +129,22 @@ private:
   friend struct NDFPropertyPair;
 
 public:
+  sqlite3 *get_db() { return db; }
   bool init();
   bool init(fs::path path);
+  bool is_initialized() const { return db != nullptr; }
   ~NDF_DB();
 
+  bool create_table(const char *name, const char *query);
+
+  std::optional<int> get_file(std::string vfs_path, std::string fs_path);
   std::optional<int> insert_file(std::string vfs_path, std::string dat_path,
                                  std::string fs_path, std::string version,
                                  bool is_current = true);
+  bool delete_file(int ndf_file);
+
   std::optional<int> insert_object(int ndf_idx, const NDFObject &object);
+  bool insert_objects(int ndf_idx, const std::vector<NDFObject> &objects);
   bool insert_property(const NDFProperty &property, int object_idx,
                        int parent = -1, int position = -1);
 
@@ -144,4 +155,7 @@ public:
   bool change_object_name(int object_idx, std::string new_name);
   bool change_export_path(int object_idx, std::string new_path);
   bool fix_references(int ndf_id);
+
+  std::optional<int> insert_only_object(int ndf_idx, const NDFObject &object);
+  std::optional<int> insert_only_property(const NDFProperty &property);
 };

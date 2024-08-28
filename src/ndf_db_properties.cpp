@@ -50,31 +50,29 @@ int NDFProperty::get_db_property_value(NDF_DB *db, int property_id) {
   return value_id;
 }
 
-std::optional<int>
-NDFProperty::add_db_property(NDF_DB *db, int object_id, int parent,
-                             int position, int value_id,
-                             bool is_import_reference) const {
+std::optional<int> NDFProperty::add_db_property(NDF_DB *db) const {
   std::optional<int> prop_id;
-  if (parent == -1) {
-    if (value_id == -1) {
+  if (!db_parent) {
+    if (!db_value_id) {
       prop_id = db->stmt_insert_ndf_property.insert(
-          object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
-          property_type, is_import_reference, SQLNULL{});
+          db_object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
+          property_type, is_import_reference(), SQLNULL{});
     } else {
-
       prop_id = db->stmt_insert_ndf_property.insert(
-          object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
-          property_type, is_import_reference, value_id);
+          db_object_id, property_name, property_idx, SQLNULL{}, SQLNULL{},
+          property_type, is_import_reference(), db_value_id.value());
     }
   } else {
-    if (value_id == -1) {
+    assert(db_position.has_value());
+    if (!db_value_id) {
       prop_id = db->stmt_insert_ndf_property.insert(
-          object_id, property_name, property_idx, parent, position,
-          property_type, is_import_reference, SQLNULL{});
+          db_object_id, property_name, property_idx, db_parent.value(),
+          db_position.value(), property_type, is_import_reference(), SQLNULL{});
     } else {
       prop_id = db->stmt_insert_ndf_property.insert(
-          object_id, property_name, property_idx, parent, position,
-          property_type, is_import_reference, value_id);
+          db_object_id, property_name, property_idx, db_parent.value(),
+          db_position.value(), property_type, is_import_reference(),
+          db_value_id.value());
     }
   }
   return prop_id;
@@ -91,15 +89,10 @@ bool NDFPropertyBool::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyBool::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                int position) const {
+bool NDFPropertyBool::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_bool.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_bool.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyBool::change_value(NDF_DB *db, int property_id,
@@ -120,15 +113,10 @@ bool NDFPropertyUInt8::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyUInt8::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                 int position) const {
+bool NDFPropertyUInt8::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_uint8.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_uint8.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyUInt8::change_value(NDF_DB *db, int property_id,
@@ -149,16 +137,10 @@ bool NDFPropertyUInt16::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyUInt16::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                  int position) const {
+bool NDFPropertyUInt16::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_uint16.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_uint16.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyUInt16::change_value(NDF_DB *db, int property_id,
@@ -179,15 +161,10 @@ bool NDFPropertyInt16::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyInt16::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                 int position) const {
+bool NDFPropertyInt16::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_int16.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_int16.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyInt16::change_value(NDF_DB *db, int property_id,
@@ -208,15 +185,10 @@ bool NDFPropertyUInt32::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyUInt32::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                  int position) const {
+bool NDFPropertyUInt32::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_uint32.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_uint32.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyUInt32::change_value(NDF_DB *db, int property_id,
@@ -237,15 +209,10 @@ bool NDFPropertyInt32::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyInt32::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                 int position) const {
+bool NDFPropertyInt32::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_int32.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_int32.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyInt32::change_value(NDF_DB *db, int property_id,
@@ -266,15 +233,10 @@ bool NDFPropertyFloat32::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyFloat32::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                   int position) const {
+bool NDFPropertyFloat32::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_float32.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_float32.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyFloat32::change_value(NDF_DB *db, int property_id,
@@ -295,15 +257,10 @@ bool NDFPropertyFloat64::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyFloat64::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                   int position) const {
+bool NDFPropertyFloat64::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_float64.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_float64.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyFloat64::change_value(NDF_DB *db, int property_id,
@@ -325,15 +282,10 @@ bool NDFPropertyString::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyString::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                  int position) const {
+bool NDFPropertyString::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_string.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_string.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyString::change_value(NDF_DB *db, int property_id,
@@ -355,15 +307,10 @@ bool NDFPropertyWideString::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyWideString::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                      int position) const {
+bool NDFPropertyWideString::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_widestring.insert(this->value);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_widestring.insert(this->value);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyWideString::change_value(NDF_DB *db, int property_id,
@@ -387,15 +334,10 @@ bool NDFPropertyF32_vec2::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyF32_vec2::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                    int position) const {
+bool NDFPropertyF32_vec2::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_F32_vec2.insert(this->x, this->y);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_F32_vec2.insert(this->x, this->y);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyF32_vec2::change_value(NDF_DB *db, int property_id,
@@ -422,16 +364,10 @@ bool NDFPropertyF32_vec3::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyF32_vec3::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                    int position) const {
+bool NDFPropertyF32_vec3::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id =
-      db->stmt_insert_ndf_F32_vec3.insert(this->x, this->y, this->z);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_F32_vec3.insert(this->x, this->y, this->z);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyF32_vec3::change_value(NDF_DB *db, int property_id,
@@ -461,16 +397,11 @@ bool NDFPropertyF32_vec4::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyF32_vec4::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                    int position) const {
+bool NDFPropertyF32_vec4::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id =
+  db_value_id =
       db->stmt_insert_ndf_F32_vec4.insert(this->x, this->y, this->z, this->w);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyF32_vec4::change_value(NDF_DB *db, int property_id,
@@ -501,16 +432,11 @@ bool NDFPropertyColor::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyColor::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                 int position) const {
+bool NDFPropertyColor::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id =
+  db_value_id =
       db->stmt_insert_ndf_color.insert(this->r, this->g, this->b, this->a);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyColor::change_value(NDF_DB *db, int property_id,
@@ -538,15 +464,10 @@ bool NDFPropertyS32_vec2::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyS32_vec2::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                    int position) const {
+bool NDFPropertyS32_vec2::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_S32_vec2.insert(this->x, this->y);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_S32_vec2.insert(this->x, this->y);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyS32_vec3::from_ndf_db(NDF_DB *db, int property_id) {
@@ -564,16 +485,10 @@ bool NDFPropertyS32_vec3::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyS32_vec3::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                    int position) const {
+bool NDFPropertyS32_vec3::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id =
-      db->stmt_insert_ndf_S32_vec3.insert(this->x, this->y, this->z);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_S32_vec3.insert(this->x, this->y, this->z);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyImportReference::from_ndf_db(NDF_DB *db, int property_id) {
@@ -602,34 +517,28 @@ bool NDFPropertyImportReference::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyImportReference::to_ndf_db(NDF_DB *db, int object_id,
-                                           int parent, int position) const {
+bool NDFPropertyImportReference::to_ndf_db(NDF_DB *db) {
   // first try to find the object
   auto object_id_opt =
       db->stmt_get_object_from_export_path.query_single<int>(import_name);
-  int value_id = 0;
   if (object_id_opt) {
     // set referenced value as well
-    auto value_id_opt = db->stmt_insert_ndf_import_reference.insert(
+    db_value_id = db->stmt_insert_ndf_import_reference.insert(
         object_id_opt.value(), import_name);
-    if (!value_id_opt) {
+    if (!db_value_id) {
       spdlog::error("Failed to insert import reference value");
       return false;
     }
-    value_id = value_id_opt.value();
   } else {
     // only set optional_value
-    auto value_id_opt =
+    db_value_id =
         db->stmt_insert_ndf_import_reference.insert(SQLNULL{}, import_name);
-    if (!value_id_opt) {
+    if (!db_value_id) {
       spdlog::error("Failed to insert import reference value");
       return false;
     }
-    value_id = value_id_opt.value();
   }
-  // note the extra true flag for is_import_reference
-  return add_db_property(db, object_id, parent, position, value_id, true)
-      .has_value();
+  return true;
 }
 
 bool NDFPropertyImportReference::change_value(NDF_DB *db, int property_id,
@@ -666,32 +575,26 @@ bool NDFPropertyObjectReference::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyObjectReference::to_ndf_db(NDF_DB *db, int object_id,
-                                           int parent, int position) const {
+bool NDFPropertyObjectReference::to_ndf_db(NDF_DB *db) {
   // first get the object_id from the object_name
   auto object_id_opt =
       db->stmt_get_object_from_name.query_single<int>(object_name);
-  int value_id = 0;
   if (object_id_opt) {
     // found object, so insert the reference
-    auto value_id_opt = db->stmt_insert_ndf_object_reference.insert(
+    db_value_id = db->stmt_insert_ndf_object_reference.insert(
         object_id_opt.value(), object_name);
-    if (!value_id_opt) {
+    if (!db_value_id) {
       return false;
     }
-    value_id = value_id_opt.value();
   } else {
     // object not found, so insert only the optional_value
-    auto value_id_opt =
+    db_value_id =
         db->stmt_insert_ndf_object_reference.insert(SQLNULL{}, object_name);
-    if (!value_id_opt) {
+    if (!db_value_id) {
       return false;
     }
-    value_id = value_id_opt.value();
   }
-  // we always add the original object_name as optional_value anyway, in case
-  // the object gets deleted
-  return add_db_property(db, object_id, parent, position, value_id).has_value();
+  return true;
 }
 
 bool NDFPropertyObjectReference::change_value(NDF_DB *db, int property_id,
@@ -712,14 +615,9 @@ bool NDFPropertyGUID::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyGUID::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                int position) const {
-  auto value_id = db->stmt_insert_ndf_GUID.insert(guid);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+bool NDFPropertyGUID::to_ndf_db(NDF_DB *db) {
+  db_value_id = db->stmt_insert_ndf_GUID.insert(guid);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyGUID::change_value(NDF_DB *db, int property_id,
@@ -741,15 +639,10 @@ bool NDFPropertyPathReference::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyPathReference::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                         int position) const {
+bool NDFPropertyPathReference::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_path_reference.insert(path);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_path_reference.insert(path);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyPathReference::change_value(NDF_DB *db, int property_id,
@@ -771,15 +664,10 @@ bool NDFPropertyLocalisationHash::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyLocalisationHash::to_ndf_db(NDF_DB *db, int object_id,
-                                            int parent, int position) const {
+bool NDFPropertyLocalisationHash::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_localisation_hash.insert(hash);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_localisation_hash.insert(hash);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyLocalisationHash::change_value(NDF_DB *db, int property_id,
@@ -801,15 +689,10 @@ bool NDFPropertyHash::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyHash::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                int position) const {
+bool NDFPropertyHash::to_ndf_db(NDF_DB *db) {
   // insert the value in the bool table
-  auto value_id = db->stmt_insert_ndf_hash.insert(hash);
-  if (!value_id) {
-    return -1;
-  }
-  return add_db_property(db, object_id, parent, position, value_id.value())
-      .has_value();
+  db_value_id = db->stmt_insert_ndf_hash.insert(hash);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyHash::change_value(NDF_DB *db, int property_id,
@@ -836,19 +719,21 @@ bool NDFPropertyList::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyList::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                int position) const {
+bool NDFPropertyList::to_ndf_db(NDF_DB *db) {
   int pos = 0;
   // first we insert the property for us in the table, note we do not have a
-  auto prop_id_opt = add_db_property(db, object_id, parent, position, -1);
+  // FIXME: why insert -1 and not NULL?
+  auto prop_id_opt = add_db_property(db);
   if (!prop_id_opt) {
     spdlog::error("Couldn't add property {}", property_name);
     return false;
   }
   int prop_id = prop_id_opt.value();
   for (auto &prop : values) {
+    prop->db_parent = prop_id;
+    prop->db_position = pos;
     // insert the property into the db
-    bool ret = prop->to_ndf_db(db, object_id, prop_id, pos);
+    bool ret = prop->to_ndf_db(db);
     if (!ret) {
       spdlog::error("Could not insert list item into db for property {}", pos);
       return false;
@@ -893,11 +778,10 @@ bool NDFPropertyMap::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyMap::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                               int position) const {
+bool NDFPropertyMap::to_ndf_db(NDF_DB *db) {
   int pos = 0;
   // first we insert the property for us in the table, note we do not have a
-  auto prop_id_opt = add_db_property(db, object_id, parent, position, -1);
+  auto prop_id_opt = add_db_property(db);
   if (!prop_id_opt) {
     spdlog::error("Couldn't add property {}", property_name);
     return false;
@@ -905,13 +789,17 @@ bool NDFPropertyMap::to_ndf_db(NDF_DB *db, int object_id, int parent,
   int prop_id = prop_id_opt.value();
   for (auto &[key, value] : values) {
     // insert the property into the db
-    bool ret = key->to_ndf_db(db, object_id, prop_id, pos);
+    key->db_parent = prop_id;
+    key->db_position = pos;
+    bool ret = key->to_ndf_db(db);
     if (!ret) {
       spdlog::error("Could not insert map key into db @{}", pos);
       return false;
     }
     pos += 1;
-    ret = value->to_ndf_db(db, object_id, prop_id, pos);
+    value->db_parent = prop_id;
+    value->db_position = pos;
+    ret = value->to_ndf_db(db);
     if (!ret) {
       spdlog::error("Could not insert map value into db @{}", pos);
       return false;
@@ -961,24 +849,27 @@ bool NDFPropertyPair::from_ndf_db(NDF_DB *db, int property_id) {
   return true;
 }
 
-bool NDFPropertyPair::to_ndf_db(NDF_DB *db, int object_id, int parent,
-                                int position) const {
+bool NDFPropertyPair::to_ndf_db(NDF_DB *db) {
   int pos = 0;
   // first we insert the property for us in the table, note we do not have a
-  auto prop_id_opt = add_db_property(db, object_id, parent, position, -1);
+  auto prop_id_opt = add_db_property(db);
   if (!prop_id_opt) {
     spdlog::error("Couldn't add property {}", property_name);
     return false;
   }
   int prop_id = prop_id_opt.value();
   // insert the property into the db
-  bool ret = first->to_ndf_db(db, object_id, prop_id, pos);
+  first->db_parent = prop_id;
+  first->db_position = pos;
+  bool ret = first->to_ndf_db(db);
   if (!ret) {
     spdlog::error("Could not insert pair first into db @{}", pos);
     return false;
   }
   pos += 1;
-  ret = second->to_ndf_db(db, object_id, prop_id, pos);
+  second->db_parent = prop_id;
+  second->db_position = pos;
+  ret = second->to_ndf_db(db);
   if (!ret) {
     spdlog::error("Could not insert pair second into db @{}", pos);
     return false;

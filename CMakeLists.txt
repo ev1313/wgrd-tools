@@ -64,10 +64,10 @@ target_include_directories(ndf
     ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
 
-add_executable(ndfbin_helper
-        src/ndfbin_helper.cpp
-)
-target_link_libraries(ndfbin_helper PRIVATE ndf)
+#add_executable(ndfbin_helper
+#        src/ndfbin_helper.cpp
+#)
+#target_link_libraries(ndfbin_helper PRIVATE ndf)
 
 option(BUILD_TESTS "Build tests" OFF)
 if(${BUILD_TESTS})
