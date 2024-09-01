@@ -518,27 +518,9 @@ bool NDFPropertyImportReference::from_ndf_db(NDF_DB *db, int property_id) {
 }
 
 bool NDFPropertyImportReference::to_ndf_db(NDF_DB *db) {
-  // first try to find the object
-  auto object_id_opt =
-      db->stmt_get_object_from_export_path.query_single<int>(import_name);
-  if (object_id_opt) {
-    // set referenced value as well
-    db_value_id = db->stmt_insert_ndf_import_reference.insert(
-        object_id_opt.value(), import_name);
-    if (!db_value_id) {
-      spdlog::error("Failed to insert import reference value");
-      return false;
-    }
-  } else {
-    // only set optional_value
-    db_value_id =
-        db->stmt_insert_ndf_import_reference.insert(SQLNULL{}, import_name);
-    if (!db_value_id) {
-      spdlog::error("Failed to insert import reference value");
-      return false;
-    }
-  }
-  return true;
+  db_value_id =
+      db->stmt_insert_ndf_import_reference.insert(SQLNULL{}, import_name);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyImportReference::change_value(NDF_DB *db, int property_id,
@@ -576,25 +558,10 @@ bool NDFPropertyObjectReference::from_ndf_db(NDF_DB *db, int property_id) {
 }
 
 bool NDFPropertyObjectReference::to_ndf_db(NDF_DB *db) {
-  // first get the object_id from the object_name
-  auto object_id_opt =
-      db->stmt_get_object_from_name.query_single<int>(object_name);
-  if (object_id_opt) {
-    // found object, so insert the reference
-    db_value_id = db->stmt_insert_ndf_object_reference.insert(
-        object_id_opt.value(), object_name);
-    if (!db_value_id) {
-      return false;
-    }
-  } else {
-    // object not found, so insert only the optional_value
-    db_value_id =
-        db->stmt_insert_ndf_object_reference.insert(SQLNULL{}, object_name);
-    if (!db_value_id) {
-      return false;
-    }
-  }
-  return true;
+  // object not found, so insert only the optional_value
+  db_value_id =
+      db->stmt_insert_ndf_object_reference.insert(SQLNULL{}, object_name);
+  return db_value_id.has_value();
 }
 
 bool NDFPropertyObjectReference::change_value(NDF_DB *db, int property_id,

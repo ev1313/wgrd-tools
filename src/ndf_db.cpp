@@ -6,7 +6,7 @@
 
 #define ndf_property_simple(NAME, DATATYPE)                                    \
   create_table(#NAME,                                                          \
-               R"( CREATE TABLE ndf_)" #NAME                                   \
+               R"( CREATE TABLE IF NOT EXISTS ndf_)" #NAME                     \
                R"((id INTEGER PRIMARY KEY AUTOINCREMENT,value )" #DATATYPE     \
                R"(); )");                                                      \
   stmt_insert_ndf_##NAME.init(db, R"( INSERT INTO ndf_)" #NAME                 \
@@ -22,14 +22,13 @@
           R"(.value;)");
 
 bool NDF_DB::init_statements() {
-  sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL);
-  sqlite3_exec(db, "PRAGMA journal_mode = MEMORY", NULL, NULL, NULL);
+  // sqlite3_exec(db, "PRAGMA synchronous = FULL", NULL, NULL, NULL);
+  // sqlite3_exec(db, "PRAGMA journal_mode = WAL", NULL, NULL, NULL);
   sqlite3_exec(db, "PRAGMA optimize = 0x10002", NULL, NULL, NULL);
-  sqlite3_exec(db, "PRAGMA synchronous = OFF", NULL, NULL, NULL);
   sqlite3_exec(db, "PRAGMA cache_size = -10240", NULL, NULL, NULL);
   sqlite3_exec(db, "PRAGMA page_size = 32768", NULL, NULL, NULL);
   create_table("ndf_file",
-               R"( CREATE TABLE ndf_file(
+               R"( CREATE TABLE IF NOT EXISTS ndf_file(
                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                                             vfs_path TEXT,
                                             dat_path TEXT,
@@ -38,7 +37,7 @@ bool NDF_DB::init_statements() {
                                             is_current BOOLEAN
                                             ); )");
   create_table("ndf_object",
-               R"( CREATE TABLE ndf_object(
+               R"( CREATE TABLE IF NOT EXISTS ndf_object(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           ndf_id INTEGER NOT NULL REFERENCES ndf_file(id) ON UPDATE CASCADE ON DELETE CASCADE,
                                           object_name TEXT,
@@ -47,7 +46,7 @@ bool NDF_DB::init_statements() {
                                           is_top_object BOOLEAN
                                           ); )");
   create_table("ndf_property",
-               R"( CREATE TABLE ndf_property(
+               R"( CREATE TABLE IF NOT EXISTS ndf_property(
                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                                             object_id INTEGER NOT NULL REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE CASCADE,
                                             property_name TEXT,
@@ -60,20 +59,20 @@ bool NDF_DB::init_statements() {
                                             ); )");
 
   create_table("ndf_F32_vec2",
-               R"( CREATE TABLE ndf_F32_vec2(
+               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec2(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x REAL,
                                           value_y REAL
                                           ); )");
   create_table("ndf_F32_vec3",
-               R"( CREATE TABLE ndf_F32_vec3(
+               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec3(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x REAL,
                                           value_y REAL,
                                           value_z REAL
                                           ); )");
   create_table("ndf_F32_vec4",
-               R"( CREATE TABLE ndf_F32_vec4(
+               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec4(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x REAL,
                                           value_y REAL,
@@ -81,20 +80,20 @@ bool NDF_DB::init_statements() {
                                           value_w REAL
                                           ); )");
   create_table("ndf_S32_vec2",
-               R"( CREATE TABLE ndf_S32_vec2(
+               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec2(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x INTEGER,
                                           value_y INTEGER
                                           ); )");
   create_table("ndf_S32_vec3",
-               R"( CREATE TABLE ndf_S32_vec3(
+               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec3(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x INTEGER,
                                           value_y INTEGER,
                                           value_z INTEGER
                                           ); )");
   create_table("ndf_S32_vec4",
-               R"( CREATE TABLE ndf_S32_vec4(
+               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec4(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                                           value_x INTEGER,
                                           value_y INTEGER,
@@ -102,7 +101,7 @@ bool NDF_DB::init_statements() {
                                           value_w INTEGER
                                           ); )");
   create_table("ndf_color",
-               R"( CREATE TABLE ndf_color(
+               R"( CREATE TABLE IF NOT EXISTS ndf_color(
                                                            id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                            value_r INTEGER,
                                                            value_g INTEGER,
@@ -110,13 +109,13 @@ bool NDF_DB::init_statements() {
                                                            value_a INTEGER
                                                            ); )");
   create_table("ndf_object_reference",
-               R"( CREATE TABLE ndf_object_reference(
+               R"( CREATE TABLE IF NOT EXISTS ndf_object_reference(
                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
                                          referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
                                          optional_value TEXT
                                          ); )");
   create_table("ndf_import_reference",
-               R"( CREATE TABLE ndf_import_reference(
+               R"( CREATE TABLE IF NOT EXISTS ndf_import_reference(
                                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                                                     referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
                                                     optional_value TEXT
@@ -323,16 +322,6 @@ NDF_DB::~NDF_DB() {
 }
 
 bool NDF_DB::create_table(const char *name, const char *query) {
-  SQLStatement<0, 0> stmt_check_table_exists;
-  stmt_check_table_exists.init(
-      db, std::format("SELECT COUNT(type) FROM sqlite_master WHERE "
-                      "type='table' AND name='{}';",
-                      name)
-              .c_str());
-  auto tbl_exists_opt = stmt_check_table_exists.query_single<int>();
-  if (tbl_exists_opt.value_or(0)) {
-    return true;
-  }
   SQLStatement<0, 0> stmt_create_ndf_file_tbl;
   stmt_create_ndf_file_tbl.init(db, query);
   if (!stmt_create_ndf_file_tbl.execute()) {

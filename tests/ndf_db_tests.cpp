@@ -9,6 +9,9 @@
 #include <pybind11/embed.h>
 namespace py = pybind11;
 
+#include <chrono>
+#include <numeric>
+
 #include "ndf_db.hpp"
 
 struct PyFixture {
@@ -270,5 +273,31 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     NDFPropertyImportReference *import_ref =
         (NDFPropertyImportReference *)db_obj.value().properties[5].get();
     REQUIRE(import_ref->import_name == "$/test/new_path");
+  }
+  SECTION("insert many objects") {
+    NDF_DB db;
+    fs::remove_all("/tmp/foo.db");
+    db.init("/tmp/foo.db");
+    // db.init("");
+
+    // create test file
+    auto ndf_file_id_opt =
+        db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar", "test");
+    REQUIRE(ndf_file_id_opt.has_value());
+    auto ndf_file_id = ndf_file_id_opt.value();
+
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int x = 0; x < 160000; x++) {
+      NDFObject obj;
+      obj.name = "ndf_object_" + std::to_string(x);
+      obj.class_name = "TTestClass";
+      obj.export_path = "$/test/object" + std::to_string(x);
+      obj.is_top_object = x % 99;
+      db.insert_only_object(ndf_file_id, obj);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    spdlog::info("elapsed time: {}", elapsed_seconds.count());
+    REQUIRE(false);
   }
 }

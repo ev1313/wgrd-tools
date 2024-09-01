@@ -24,77 +24,124 @@ void NDF::save_as_ndf_xml(fs::path path) {
 }
 
 void NDF::load_from_ndf_xml(fs::path path, NDF_DB *db, int ndf_id) {
+
+  pugi::xml_document doc;
+  pugi::xml_parse_result result = doc.load_file(path.c_str());
+  spdlog::info("Load result: {}", result.description());
+  assert(result.status == pugi::status_ok);
+
+  // FIXME: just init only for all ndf types
+  for (int i = 0; i < 0x25; i++) {
+    db_property_map[i] = std::vector<NDFProperty *>();
+  }
+  spdlog::info("parsing NDF objects");
+  for (const auto &obj : doc.child("NDF").children()) {
+    NDFObject object;
+    object.name = obj.name();
+    object.class_name = obj.attribute("class").as_string();
+    object.export_path = obj.attribute("export_path").as_string();
+    object.is_top_object = obj.attribute("is_top_object").as_bool();
+
+    for (const auto &prop : obj.children()) {
+      uint32_t ndf_type = prop.attribute("typeId").as_uint();
+      std::unique_ptr<NDFProperty> property =
+          NDFProperty::get_property_from_ndf_xml(ndf_type, prop);
+
+      // property->db_object_id = object_id;
+      //  add into the db_map
+      db_property_map[ndf_type].push_back(property.get());
+
+      property->from_ndf_xml(prop);
+      object.add_property(std::move(property));
+    }
+
+    add_object(std::move(object));
+  }
   {
-    SQLTransaction trans(db->get_db());
-
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file(path.c_str());
-    spdlog::debug("Load result: {}", result.description());
-    assert(result.status == pugi::status_ok);
-
-    // FIXME: just init only for all ndf types
-    for (int i = 0; i < 0x25; i++) {
-      db_property_map[i] = std::vector<NDFProperty *>();
-    }
-    spdlog::debug("parsing NDF objects");
-    for (const auto &obj : doc.child("NDF").children()) {
-      NDFObject object;
-      object.name = obj.name();
-      object.class_name = obj.attribute("class").as_string();
-      object.export_path = obj.attribute("export_path").as_string();
-      object.is_top_object = obj.attribute("is_top_object").as_bool();
-
-      auto object_id_opt = db->insert_only_object(ndf_id, object);
-      if (!object_id_opt) {
-        spdlog::error("couldn't insert object!");
-        trans.rollback();
-        continue;
+    auto begin = std::chrono::high_resolution_clock::now();
+    {
+      SQLTransaction trans(db->get_db());
+      for (const auto &[name, object] : object_map) {
+        auto object_id_opt = db->insert_only_object(ndf_id, object);
+        if (!object_id_opt) {
+          spdlog::error("couldn't insert object!");
+          trans.rollback();
+          continue;
+        }
+        auto object_id = object_id_opt.value();
+        for (auto &property : object.properties) {
+          property->db_object_id = object_id;
+        }
       }
-      auto object_id = object_id_opt.value();
-
-      for (const auto &prop : obj.children()) {
-        uint32_t ndf_type = prop.attribute("typeId").as_uint();
-        std::unique_ptr<NDFProperty> property =
-            NDFProperty::get_property_from_ndf_xml(ndf_type, prop);
-
-        property->db_object_id = object_id;
-        // add into the db_map
-        db_property_map[ndf_type].push_back(property.get());
-
-        property->from_ndf_xml(prop);
-        object.add_property(std::move(property));
-      }
-
-      add_object(std::move(object));
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    spdlog::info(
+        "inserted objects {} in {} ms", object_map.size(),
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+            .count());
   }
   // insert values
-  spdlog::debug("inserting NDF values to db");
-  for (auto [ndf_type, properties] : db_property_map) {
-    spdlog::debug("inserting NDF type {}", ndf_type);
-    SQLTransaction trans(db->get_db());
-    for (auto prop : properties) {
-      prop->to_ndf_db(db);
+  {
+    spdlog::info("inserting NDF values to db");
+    int i = 0;
+    auto begin = std::chrono::high_resolution_clock::now();
+    {
+      SQLTransaction trans(db->get_db());
+      for (auto [ndf_type, properties] : db_property_map) {
+        spdlog::debug("inserting NDF type {}", ndf_type);
+        for (auto prop : properties) {
+          i += 1;
+          prop->to_ndf_db(db);
+        }
+      }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    spdlog::info(
+        "inserted properties {} in {} ms", i,
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+            .count());
   }
   // insert missing properties for types other than list/map/pair
-  spdlog::debug("inserting NDF properties to db");
+  spdlog::debug("inserting missing NDF properties to db");
   {
-    SQLTransaction trans(db->get_db());
-    for (auto [ndf_type, properties] : db_property_map) {
-      if (ndf_type == NDFPropertyType::List) {
-        continue;
-      }
-      if (ndf_type == NDFPropertyType::Map) {
-        continue;
-      }
-      if (ndf_type == NDFPropertyType::Pair) {
-        continue;
-      }
-      for (auto prop : properties) {
-        db->insert_only_property(*prop);
+    int i = 0;
+    auto begin = std::chrono::high_resolution_clock::now();
+    {
+      SQLTransaction trans(db->get_db());
+      for (auto [ndf_type, properties] : db_property_map) {
+        if (ndf_type == NDFPropertyType::List) {
+          continue;
+        }
+        if (ndf_type == NDFPropertyType::Map) {
+          continue;
+        }
+        if (ndf_type == NDFPropertyType::Pair) {
+          continue;
+        }
+        for (auto prop : properties) {
+          i += 1;
+          db->insert_only_property(*prop);
+        }
       }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    spdlog::info(
+        "inserted missing {} properties in {} ms", i,
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+            .count());
+  }
+  {
+    auto begin = std::chrono::high_resolution_clock::now();
+    {
+      if (!db->fix_references(ndf_id)) {
+        spdlog::error("unable to fix references!");
+      }
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    spdlog::info(
+        "fixed references in {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+            .count());
   }
   spdlog::debug("finished NDF db");
 
