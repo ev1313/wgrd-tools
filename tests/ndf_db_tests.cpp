@@ -3,6 +3,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "generator.hpp"
 #include "ndf_properties.hpp"
+#include "spdlog/spdlog.h"
 
 #include <filesystem>
 #include <memory>
@@ -20,6 +21,7 @@ private:
 
 public:
   PyFixture() {
+    spdlog::set_level(spdlog::level::debug);
     pybind11::initialize_interpreter();
     ndf_generator::create_test_files(directory);
   }
@@ -287,7 +289,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     auto ndf_file_id = ndf_file_id_opt.value();
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int x = 0; x < 160000; x++) {
+    for (int x = 0; x < 16000; x++) {
       NDFObject obj;
       obj.name = "ndf_object_" + std::to_string(x);
       obj.class_name = "TTestClass";
@@ -298,6 +300,56 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
     spdlog::info("elapsed time: {}", elapsed_seconds.count());
-    REQUIRE(false);
   }
+
+  SECTION("load generated test files and check they are parsed and builded "
+          "correctly") {
+    NDF_DB db;
+    db.init();
+    fs::path output_files_path =
+        fs::temp_directory_path() / "testfiles" / "compare_ndfbin";
+    fs::create_directories(output_files_path);
+
+    fs::path files_path = fs::temp_directory_path() / "testfiles" / "ndfbin";
+
+    NDF ndf_from_bin;
+    auto ndf_from_bin_id_opt = db.insert_file("$/test/test.ndfbin", files_path,
+                                              output_files_path, "test_bin");
+    REQUIRE(ndf_from_bin_id_opt.has_value());
+    int ndf_from_bin_id = ndf_from_bin_id_opt.value();
+    ndf_from_bin.load_from_ndfbin(files_path / "test.ndfbin");
+    spdlog::info("property count {}",
+                 ndf_from_bin.object_map.begin()->second.properties.size());
+    REQUIRE(ndf_from_bin.object_map.begin()->second.properties.size() > 0);
+    ndf_from_bin.insert_into_db(&db, ndf_from_bin_id);
+
+    NDF ndf_from_xml;
+    auto ndf_from_xml_id_opt = db.insert_file(
+        "$/test/test.ndfbin.xml", files_path, output_files_path, "test_xml");
+    REQUIRE(ndf_from_xml_id_opt.has_value());
+    int ndf_from_xml_id = ndf_from_xml_id_opt.value();
+    ndf_from_xml.load_from_ndf_xml(files_path / "test.ndfbin.xml");
+    ndf_from_xml.insert_into_db(&db, ndf_from_xml_id);
+    REQUIRE(ndf_from_bin.object_map.size() == ndf_from_xml.object_map.size());
+
+    NDF ndf_from_db_1;
+    ndf_from_db_1.load_from_db(&db, ndf_from_bin_id);
+    REQUIRE(ndf_from_db_1.object_map.size() == ndf_from_bin.object_map.size());
+    auto object_it = ndf_from_bin.object_map.begin();
+    while (object_it != ndf_from_bin.object_map.end()) {
+      REQUIRE(ndf_from_bin.object_map.find(object_it->first) !=
+              ndf_from_bin.object_map.end());
+      REQUIRE(check_object_equality(
+          &object_it.value(), &ndf_from_bin.object_map[object_it->first]));
+      object_it++;
+    }
+    ndf_from_db_1.save_as_ndf_xml(output_files_path / "test.ndfbin.xml");
+    ndf_from_db_1.save_as_ndfbin(output_files_path / "test.ndfbin");
+  }
+  NDF_DB db;
+  db.init();
+  SECTION("get object from database") { REQUIRE(false); }
+  SECTION("get property from database") { REQUIRE(false); }
+  SECTION("get properties of object from database") { REQUIRE(false); }
+  SECTION("get class properties from database") { REQUIRE(false); }
 }

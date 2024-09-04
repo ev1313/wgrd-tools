@@ -74,7 +74,8 @@ NDFProperty::get_property_from_ndftype(uint32_t ndf_type) {
     return std::make_unique<NDFPropertyHash>();
   }
   default: {
-    throw std::runtime_error(std::format("Unknown NDFType: {}", ndf_type));
+    throw std::runtime_error(
+        std::format("Unknown NDFType: 0x{:02X}", ndf_type));
   }
   }
 }

@@ -36,6 +36,10 @@ private:
   ndf_property_simple_def(localisation_hash, TEXT);
   ndf_property_simple_def(hash, TEXT);
 
+  // class db statements
+  SQLStatement<1, 0> stmt_insert_class;
+  SQLStatement<3, 0> stmt_insert_class_property;
+  SQLStatement<2, 1> stmt_get_class_properties;
   // insertion statements
   SQLStatement<5, 0> stmt_insert_ndf_file;
   SQLStatement<5, 0> stmt_insert_ndf_object;
@@ -55,6 +59,7 @@ private:
   SQLStatement<1, 1> stmt_get_object_from_name;
   SQLStatement<1, 1> stmt_get_object_from_export_path;
   SQLStatement<1, 1> stmt_get_object_ndf_id;
+  SQLStatement<1, 5> stmt_get_object_full_ndf_id;
   SQLStatement<1, 1> stmt_get_object_name;
   SQLStatement<1, 1> stmt_get_object_names;
   SQLStatement<1, 1> stmt_get_object_class_names;
@@ -158,4 +163,7 @@ public:
 
   std::optional<int> insert_only_object(int ndf_idx, const NDFObject &object);
   std::optional<int> insert_only_property(const NDFProperty &property);
+  std::optional<std::vector<NDFObject>> get_only_objects(int ndf_idx);
+  std::optional<std::vector<std::unique_ptr<NDFProperty>>>
+  get_only_properties(int object_idx);
 };

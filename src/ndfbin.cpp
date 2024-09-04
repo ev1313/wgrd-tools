@@ -61,7 +61,7 @@ struct NDF_Type {
 void NDF::load_from_ndfbin(fs::path path) {
   std::ifstream file(path, std::ios::binary | std::ios::in);
   if (!file.is_open()) {
-    throw std::runtime_error("Failed to open file");
+    throw std::runtime_error("Failed to open file " + path.string());
   }
   load_from_ndfbin_stream(file);
 }

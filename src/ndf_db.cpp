@@ -57,6 +57,29 @@ bool NDF_DB::init_statements() {
                                             is_import_reference BOOLEAN,
                                             value INTEGER
                                             ); )");
+  // class db
+  create_table("ndf_class", R"(
+      CREATE TABLE IF NOT EXISTS ndf_class(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_name TEXT
+      );
+  )");
+  create_table("ndf_class_property", R"(
+      CREATE TABLE IF NOT EXISTS ndf_class_property(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER REFERENCES ndf_class(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        property_name TEXT,
+        property_index INTEGER
+      );
+  )");
+  stmt_insert_class.init(db,
+                         R"( INSERT INTO ndf_class (class_name) VALUES (?); )");
+  stmt_insert_class_property.init(
+      db,
+      R"( INSERT INTO ndf_class_property (class_id, property_name, property_index) VALUES (?, ?, ?); )");
+  stmt_get_class_properties.init(
+      db,
+      R"( SELECT property_name, property_index FROM ndf_class_property INNER JOIN ndf_class ON ndf_class.id=ndf_class_property.class_id WHERE class_name=?; )");
 
   create_table("ndf_F32_vec2",
                R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec2(
@@ -182,6 +205,9 @@ bool NDF_DB::init_statements() {
       db, R"( SELECT id FROM ndf_object WHERE export_path=?; )");
   stmt_get_object_ndf_id.init(db,
                               R"( SELECT ndf_id FROM ndf_object WHERE id=?; )");
+  stmt_get_object_full_ndf_id.init(
+      db,
+      R"( SELECT id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE ndf_id=?; )");
   stmt_get_object_name.init(
       db, R"( SELECT object_name FROM ndf_object WHERE id=?; )");
   stmt_get_object_names.init(
@@ -195,7 +221,7 @@ bool NDF_DB::init_statements() {
       R"( SELECT ndf_id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE id=?; )");
   stmt_get_object_properties.init(
       db,
-      R"( SELECT id FROM ndf_property WHERE object_id=? AND property_index<>-1; )");
+      R"( SELECT id FROM ndf_property WHERE object_id=? AND parent IS NULL; )");
   stmt_get_property_names.init(
       db,
       R"( SELECT property_name FROM ndf_property WHERE object_id=? AND property_index<>-1; )");
@@ -417,6 +443,7 @@ NDF_DB::get_property(int property_id) {
   if (!property) {
     return std::nullopt;
   }
+  // load value
   if (!property->from_ndf_db(this, property_id)) {
     return std::nullopt;
   }
@@ -468,4 +495,48 @@ std::optional<int> NDF_DB::insert_only_property(const NDFProperty &property) {
     return false;
   }
   return property_id.value();
+}
+
+std::optional<std::vector<NDFObject>> NDF_DB::get_only_objects(int ndf_id) {
+  auto objects_opt = stmt_get_object_full_ndf_id.query<
+      std::tuple<size_t, std::string, std::string, std::string, bool>>(ndf_id);
+  if (!objects_opt) {
+    spdlog::error("did not find objects {}", ndf_id);
+    return std::nullopt;
+  }
+  std::vector<NDFObject> ret;
+  for (auto object_tup : objects_opt.value()) {
+    auto &[db_id, object_name, class_name, export_path, is_top_object] =
+        object_tup;
+    NDFObject obj;
+    obj.name = object_name;
+    obj.class_name = class_name;
+    obj.export_path = export_path;
+    obj.is_top_object = is_top_object;
+    obj.db_id = db_id;
+    spdlog::debug("loading object {} {}", db_id, obj.name);
+    ret.push_back(std::move(obj));
+  }
+  return ret;
+}
+
+std::optional<std::vector<std::unique_ptr<NDFProperty>>>
+NDF_DB::get_only_properties(int object_idx) {
+  auto prop_ids_opt = stmt_get_object_properties.query<int>(object_idx);
+  if (!prop_ids_opt.has_value()) {
+    spdlog::error("did not find properties {}", object_idx);
+    return std::nullopt;
+  }
+  std::vector<std::unique_ptr<NDFProperty>> ret;
+  for (auto prop_id : prop_ids_opt.value()) {
+    auto prop_opt = get_property(prop_id);
+    if (prop_opt.has_value()) {
+      spdlog::debug("loading property {} {}", object_idx, prop_id);
+      ret.push_back(std::move(prop_opt.value()));
+    } else {
+      spdlog::error("could not load property {} {}", object_idx, prop_id);
+      return std::nullopt;
+    }
+  }
+  return ret;
 }

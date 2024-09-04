@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-class NDF;
+struct NDF;
 
 enum NDFPropertyType : uint32_t {
   Bool = 0x0,
@@ -91,12 +91,7 @@ struct NDFProperty {
   virtual bool is_map() const { return false; }
   virtual bool is_pair() const { return false; }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
-  virtual void fix_references(const std::string &, const std::string &) {}
-  virtual void
-  fix_references(const std::unordered_map<std::string, std::string> &) {}
   virtual std::string as_string() = 0;
-  virtual std::unordered_set<std::string> get_object_references() { return {}; }
-  virtual std::unordered_set<std::string> get_import_references() { return {}; }
 
   // used by ndf_db
   int get_db_property_value(NDF_DB *db, int property_id);
@@ -462,21 +457,6 @@ struct NDFPropertyObjectReference : NDFProperty {
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   bool is_object_reference() const override { return true; }
-  void fix_references(const std::string &old_name,
-                      const std::string &new_name) override {
-    if (object_name == old_name) {
-      object_name = new_name;
-    }
-  }
-  void fix_references(
-      const std::unordered_map<std::string, std::string> &renames) override {
-    if (renames.contains(object_name)) {
-      object_name = renames.at(object_name);
-    }
-  }
-  std::unordered_set<std::string> get_object_references() override {
-    return {object_name};
-  }
 
   void from_ndfbin(NDF *root, std::istream &stream) override;
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
@@ -501,9 +481,6 @@ struct NDFPropertyImportReference : NDFProperty {
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   bool is_import_reference() const override { return true; }
-  std::unordered_set<std::string> get_import_references() override {
-    return {import_name};
-  }
 
   void from_ndfbin(NDF *root, std::istream &stream) override;
   void to_ndfbin(NDF *root, std::ostream &stream) const override;
@@ -526,34 +503,6 @@ struct NDFPropertyList : NDFProperty {
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   bool is_list() const override { return true; }
-  void fix_references(const std::string &old_name,
-                      const std::string &new_name) override {
-    for (auto &value : values) {
-      value->fix_references(old_name, new_name);
-    }
-  }
-  void fix_references(
-      const std::unordered_map<std::string, std::string> &renames) override {
-    for (auto &value : values) {
-      value->fix_references(renames);
-    }
-  }
-  std::unordered_set<std::string> get_object_references() override {
-    std::unordered_set<std::string> ret;
-    for (auto const &value : values) {
-      auto value_refs = value->get_object_references();
-      ret.insert(value_refs.begin(), value_refs.end());
-    }
-    return ret;
-  }
-  std::unordered_set<std::string> get_import_references() override {
-    std::unordered_set<std::string> ret;
-    for (auto const &value : values) {
-      auto value_refs = value->get_import_references();
-      ret.insert(value_refs.begin(), value_refs.end());
-    }
-    return ret;
-  }
 
   void from_ndfbin(NDF *, std::istream &) override;
   void to_ndfbin(NDF *, std::ostream &) const override;
@@ -586,40 +535,6 @@ struct NDFPropertyMap : NDFProperty {
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   bool is_map() const override { return true; }
-  void fix_references(const std::string &old_name,
-                      const std::string &new_name) override {
-    for (auto const &[key, value] : values) {
-      key->fix_references(old_name, new_name);
-      value->fix_references(old_name, new_name);
-    }
-  }
-  void fix_references(
-      const std::unordered_map<std::string, std::string> &renames) override {
-    for (auto const &[key, value] : values) {
-      key->fix_references(renames);
-      value->fix_references(renames);
-    }
-  }
-  std::unordered_set<std::string> get_object_references() override {
-    std::unordered_set<std::string> ret;
-    for (auto const &[key, value] : values) {
-      auto key_refs = key->get_object_references();
-      ret.insert(key_refs.begin(), key_refs.end());
-      auto value_refs = value->get_object_references();
-      ret.insert(value_refs.begin(), value_refs.end());
-    }
-    return ret;
-  }
-  std::unordered_set<std::string> get_import_references() override {
-    std::unordered_set<std::string> ret;
-    for (auto const &[key, value] : values) {
-      auto key_refs = key->get_import_references();
-      ret.insert(key_refs.begin(), key_refs.end());
-      auto value_refs = value->get_import_references();
-      ret.insert(value_refs.begin(), value_refs.end());
-    }
-    return ret;
-  }
 
   void from_ndfbin(NDF *, std::istream &) override;
   void to_ndfbin(NDF *, std::ostream &) const override;
@@ -736,32 +651,6 @@ struct NDFPropertyPair : NDFProperty {
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   bool is_pair() const override { return true; }
-  void fix_references(const std::string &old_name,
-                      const std::string &new_name) override {
-    first->fix_references(old_name, new_name);
-    second->fix_references(old_name, new_name);
-  }
-  void fix_references(
-      const std::unordered_map<std::string, std::string> &renames) override {
-    first->fix_references(renames);
-    second->fix_references(renames);
-  }
-  std::unordered_set<std::string> get_object_references() override {
-    std::unordered_set<std::string> ret;
-    auto first_refs = first->get_object_references();
-    ret.insert(first_refs.begin(), first_refs.end());
-    auto second_refs = second->get_object_references();
-    ret.insert(second_refs.begin(), second_refs.end());
-    return ret;
-  }
-  std::unordered_set<std::string> get_import_references() override {
-    std::unordered_set<std::string> ret;
-    auto first_refs = first->get_import_references();
-    ret.insert(first_refs.begin(), first_refs.end());
-    auto second_refs = second->get_import_references();
-    ret.insert(second_refs.begin(), second_refs.end());
-    return ret;
-  }
 
   void from_ndfbin(NDF *, std::istream &) override;
   void to_ndfbin(NDF *, std::ostream &) const override;

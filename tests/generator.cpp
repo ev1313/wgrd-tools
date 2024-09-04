@@ -7,6 +7,7 @@
 #include <argparse/argparse.hpp>
 
 #include <experimental/random>
+#include <memory>
 #include <stdint.h>
 
 #include <pybind11/embed.h>
@@ -14,20 +15,44 @@ namespace py = pybind11;
 
 #include "pugixml.hpp"
 
-NDFObject ndf_generator::gen_random_object() {
+NDFObject ndf_generator::gen_random_object(int id) {
   NDFObject obj;
-  obj.name = "test_object";
+  obj.name = std::format("test_object_{}", id);
   obj.class_name = "TTestClass";
   obj.is_top_object = true;
-  obj.export_path = "$/test/object1";
+  obj.export_path = std::format("$/test/object{}", id);
   return obj;
 }
 
 void ndf_generator::add_random_object(NDF &ndf) {
-  auto obj = gen_random_object();
+  auto obj = gen_random_object(ndf.object_map.size() + 1);
 
   ndf.add_object(std::move(obj));
 }
+
+void ndf_generator::add_random_objects(NDF &ndf, size_t size) {
+  for (size_t i = 0; i < size; i++) {
+    auto obj = gen_random_object(ndf.object_map.size() + 1);
+    add_random_properties(obj, 10);
+    ndf.add_object(std::move(obj));
+  }
+}
+
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_string(int idx) {
+  auto prop = std::make_unique<NDFPropertyString>();
+  prop->property_idx = idx;
+  prop->property_type = NDFPropertyType::String;
+  prop->property_name = std::format("TestString_{}", prop->property_idx);
+  uint8_t i = std::experimental::randint(0, 255);
+  prop->value = std::format("TestString_{}", i);
+  return prop;
+}
+
+void ndf_generator::add_random_string(NDFObject &obj) {
+  auto prop = gen_random_string(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
 std::unique_ptr<NDFProperty> ndf_generator::gen_random_uint8(int idx) {
   auto prop = std::make_unique<NDFPropertyUInt8>();
   prop->property_idx = idx;
@@ -71,7 +96,7 @@ void ndf_generator::add_random_uint32(NDFObject &obj) {
 }
 
 std::unique_ptr<NDFProperty> ndf_generator::gen_random_int32(int idx) {
-  auto prop = std::make_unique<NDFPropertyUInt32>();
+  auto prop = std::make_unique<NDFPropertyInt32>();
   prop->property_idx = idx;
   prop->property_type = NDFPropertyType::Int32;
   prop->property_name = std::format("TestInt32_{}", prop->property_idx);
@@ -87,11 +112,12 @@ void ndf_generator::add_random_int32(NDFObject &obj) {
 std::unique_ptr<NDFProperty> ndf_generator::gen_random_list(int idx) {
   auto prop = std::make_unique<NDFPropertyList>();
   prop->property_idx = idx;
-  prop->property_type = NDFPropertyType::UInt32;
+  prop->property_type = NDFPropertyType::List;
   prop->property_name = std::format("TestList_{}", prop->property_idx);
 
   for (int i = 0; i < 10; i++) {
     auto item = gen_random_uint32(-1);
+    item->property_name = "ListItem";
     prop->values.push_back(std::move(item));
   }
   return prop;
@@ -105,12 +131,14 @@ void ndf_generator::add_random_list(NDFObject &obj) {
 std::unique_ptr<NDFProperty> ndf_generator::gen_random_map(int idx) {
   auto prop = std::make_unique<NDFPropertyMap>();
   prop->property_idx = idx;
-  prop->property_type = NDFPropertyType::UInt32;
+  prop->property_type = NDFPropertyType::Map;
   prop->property_name = std::format("TestMap_{}", prop->property_idx);
 
   for (int i = 0; i < 10; i++) {
     auto key = gen_random_uint32(-1);
+    key->property_name = "Key";
     auto value = gen_random_int32(-1);
+    value->property_name = "Value";
     prop->values.push_back({std::move(key), std::move(value)});
   }
   return prop;
@@ -151,6 +179,89 @@ ndf_generator::gen_import_reference(int idx, std::string ref) {
 void ndf_generator::add_import_reference(NDFObject &obj, std::string ref) {
   auto prop = gen_import_reference(obj.properties.size(), ref);
   obj.properties.push_back(std::move(prop));
+}
+
+std::unique_ptr<NDFProperty> ndf_generator::gen_random_property(int idx) {
+  std::unique_ptr<NDFProperty> prop;
+  switch (std::experimental::randint(0, 6)) {
+  case 0:
+    prop = gen_random_string(idx);
+    break;
+  case 1:
+    prop = gen_random_uint8(idx);
+    break;
+  case 2:
+    prop = gen_random_uint16(idx);
+    break;
+  case 3:
+    prop = gen_random_uint32(idx);
+    break;
+  case 4:
+    prop = gen_random_int32(idx);
+    break;
+  case 5:
+    prop = gen_random_list(idx);
+    break;
+  case 6:
+    prop = gen_random_map(idx);
+    break;
+  }
+  return prop;
+}
+
+void ndf_generator::add_random_property(NDFObject &obj) {
+  auto prop = gen_random_property(obj.properties.size());
+  obj.properties.push_back(std::move(prop));
+}
+
+std::vector<std::unique_ptr<NDFProperty>>
+ndf_generator::gen_random_properties(int idx, int count) {
+  std::vector<std::unique_ptr<NDFProperty>> prop;
+  switch (std::experimental::randint(0, 6)) {
+  case 0:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_string(idx + i));
+    }
+    break;
+  case 1:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_uint8(idx + i));
+    }
+    break;
+  case 2:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_uint16(idx + i));
+    }
+    break;
+  case 3:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_uint32(idx + i));
+    }
+    break;
+  case 4:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_int32(idx + i));
+    }
+    break;
+  case 5:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_list(idx + i));
+    }
+    break;
+  case 6:
+    for (int i = 0; i < count; i++) {
+      prop.push_back(gen_random_map(idx + i));
+    }
+    break;
+  }
+  return prop;
+}
+
+void ndf_generator::add_random_properties(NDFObject &obj, int count) {
+  auto props = gen_random_properties(obj.properties.size(), count);
+  for (auto &prop : props) {
+    obj.properties.push_back(std::move(prop));
+  }
 }
 
 // call with vfs_path -> path to the file
@@ -216,6 +327,8 @@ void ndf_generator::create_test_files(fs::path output_folder) {
     add_random_uint32(obj);
     add_random_uint8(obj);
     add_random_uint8(obj);
+    add_random_list(obj);
+    add_random_map(obj);
   }
   // now save it in the output folder
   test_ndf.save_as_ndf_xml(output_folder / "ndfbin" / "test.ndfbin.xml");
