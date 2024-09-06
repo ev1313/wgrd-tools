@@ -140,7 +140,7 @@ public:
   bool is_initialized() const { return db != nullptr; }
   ~NDF_DB();
 
-  bool create_table(const char *name, const char *query);
+  bool create_table(std::string name, std::string query);
 
   std::optional<int> get_file(std::string vfs_path, std::string fs_path);
   std::optional<int> insert_file(std::string vfs_path, std::string dat_path,

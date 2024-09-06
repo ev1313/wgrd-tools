@@ -43,12 +43,12 @@ public:
     }
     sqlite3_finalize(stmt);
   }
-  bool init(sqlite3 *db, const char *query) {
+  bool init(sqlite3 *db, std::string query) {
     assert(sqlite3_threadsafe() == 1);
-    int rc = sqlite3_prepare_v2(db, query, -1, &stmt, nullptr);
+    int rc = sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
       spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
-      spdlog::error("query: '{}'", query);
+      spdlog::error("query: '{}'", query.c_str());
       return false;
     }
     return true;

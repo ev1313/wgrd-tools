@@ -4,22 +4,24 @@
 #include <optional>
 #include <spdlog/spdlog.h>
 
+constexpr auto sql_create_table_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "value {1});";
+constexpr auto sql_insert_value = "INSERT INTO ndf_{0} (value) VALUES (?);";
+constexpr auto sql_get_value = "SELECT value FROM ndf_{0} WHERE id=?";
+constexpr auto sql_set_value = "UPDATE ndf_{0} SET value=? WHERE id=?";
+constexpr auto sql_get_distinct_value =
+    "SELECT DISTINCT ndf_{0}.value FROM ndf_{0} INNER JOIN ndf_property ON "
+    "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
+    "ndf_{0}.value;";
+
 #define ndf_property_simple(NAME, DATATYPE)                                    \
-  create_table(#NAME,                                                          \
-               R"( CREATE TABLE IF NOT EXISTS ndf_)" #NAME                     \
-               R"((id INTEGER PRIMARY KEY AUTOINCREMENT,value )" #DATATYPE     \
-               R"(); )");                                                      \
-  stmt_insert_ndf_##NAME.init(db, R"( INSERT INTO ndf_)" #NAME                 \
-                                  R"( (value) VALUES (?); )");                 \
-  stmt_get_##NAME##_value.init(db, R"( SELECT value FROM ndf_)" #NAME          \
-                                   R"( WHERE id=?; )");                        \
-  stmt_set_##NAME##_value.init(db, R"( UPDATE ndf_)" #NAME                     \
-                                   R"( SET value=? WHERE id=?; )");            \
+  create_table(#NAME, std::format(sql_create_table_value, #NAME, #DATATYPE));  \
+  stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_value, #NAME));       \
+  stmt_get_##NAME##_value.init(db, std::format(sql_get_value, #NAME));         \
+  stmt_set_##NAME##_value.init(db, std::format(sql_set_value, #NAME));         \
   stmt_get_distinct_##NAME##_value.init(                                       \
-      db, R"( SELECT DISTINCT ndf_)" #NAME R"(.value FROM ndf_)" #NAME         \
-          R"( INNER JOIN ndf_property ON ndf_property.value=ndf_)" #NAME       \
-          R"(.id WHERE ndf_property.object_id=? ORDER BY ndf_)" #NAME          \
-          R"(.value;)");
+      db, std::format(sql_get_distinct_value, #NAME));
 
 bool NDF_DB::init_statements() {
   // sqlite3_exec(db, "PRAGMA synchronous = FULL", NULL, NULL, NULL);
@@ -347,9 +349,9 @@ NDF_DB::~NDF_DB() {
   }
 }
 
-bool NDF_DB::create_table(const char *name, const char *query) {
+bool NDF_DB::create_table(std::string name, std::string query) {
   SQLStatement<0, 0> stmt_create_ndf_file_tbl;
-  stmt_create_ndf_file_tbl.init(db, query);
+  stmt_create_ndf_file_tbl.init(db, query.c_str());
   if (!stmt_create_ndf_file_tbl.execute()) {
     return false;
   }
