@@ -14,6 +14,8 @@ constexpr auto sql_get_distinct_value =
     "SELECT DISTINCT ndf_{0}.value FROM ndf_{0} INNER JOIN ndf_property ON "
     "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
     "ndf_{0}.value;";
+constexpr auto sql_copy_value =
+    "INSERT INTO ndf_{0} (value) SELECT value FROM ndf_{0} WHERE id=?;";
 
 #define ndf_property_simple(NAME, DATATYPE)                                    \
   create_table(#NAME, std::format(sql_create_table_value, #NAME, #DATATYPE));  \
@@ -21,7 +23,183 @@ constexpr auto sql_get_distinct_value =
   stmt_get_##NAME##_value.init(db, std::format(sql_get_value, #NAME));         \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_value, #NAME));         \
   stmt_get_distinct_##NAME##_value.init(                                       \
-      db, std::format(sql_get_distinct_value, #NAME));
+      db, std::format(sql_get_distinct_value, #NAME));                         \
+  stmt_copy_##NAME##_value.init(db, std::format(sql_copy_value, #NAME));
+
+constexpr auto sql_create_table_vec2_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "value_x {1}, value_y {1});";
+constexpr auto sql_insert_vec2_value =
+    "INSERT INTO ndf_{0} (value_x, value_y) VALUES (?,?);";
+constexpr auto sql_get_vec2_value =
+    "SELECT value_x, value_y FROM ndf_{0} WHERE id=?;";
+constexpr auto sql_set_vec2_value =
+    "UPDATE ndf_{0} SET value_x=?, value_y=? WHERE id=?";
+constexpr auto sql_get_distinct_vec2_value =
+    "SELECT DISTINCT ndf_{0}.value_x, ndf_{0}.value_y FROM ndf_{0} INNER JOIN "
+    "ndf_property ON "
+    "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
+    "ndf_{0}.value_x;";
+constexpr auto sql_copy_vec2_value =
+    "INSERT INTO ndf_{0} (value_x, value_y) SELECT value_x, value_y "
+    "FROM ndf_{0} WHERE id=?;";
+
+#define ndf_property_vec2(NAME, DATATYPE)                                      \
+  create_table(#NAME,                                                          \
+               std::format(sql_create_table_vec2_value, #NAME, #DATATYPE));    \
+  stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec2_value, #NAME));  \
+  stmt_get_##NAME##_value.init(db, std::format(sql_get_vec2_value, #NAME));    \
+  stmt_set_##NAME##_value.init(db, std::format(sql_set_vec2_value, #NAME));    \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, std::format(sql_get_distinct_vec2_value, #NAME));                    \
+  stmt_copy_##NAME##_value.init(db, std::format(sql_copy_vec2_value, #NAME));
+
+constexpr auto sql_create_table_vec3_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "value_x {1}, value_y {1}, value_z {1});";
+constexpr auto sql_insert_vec3_value =
+    "INSERT INTO ndf_{0} (value_x, value_y, value_z) VALUES (?,?,?);";
+constexpr auto sql_get_vec3_value =
+    "SELECT value_x, value_y, value_z FROM ndf_{0} WHERE id=?;";
+constexpr auto sql_set_vec3_value =
+    "UPDATE ndf_{0} SET value_x=?, value_y=?, value_z=? WHERE id=?";
+constexpr auto sql_get_distinct_vec3_value =
+    "SELECT DISTINCT ndf_{0}.value_x, ndf_{0}.value_y, ndf_{0}.value_z FROM "
+    "ndf_{0} INNER JOIN "
+    "ndf_property ON "
+    "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
+    "ndf_{0}.value_x;";
+constexpr auto sql_copy_vec3_value =
+    "INSERT INTO ndf_{0} (value_x, value_y, value_z) SELECT value_x, "
+    "value_y, value_z "
+    "FROM ndf_{0} WHERE id=?;";
+
+#define ndf_property_vec3(NAME, DATATYPE)                                      \
+  create_table(#NAME,                                                          \
+               std::format(sql_create_table_vec3_value, #NAME, #DATATYPE));    \
+  stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec3_value, #NAME));  \
+  stmt_get_##NAME##_value.init(db, std::format(sql_get_vec3_value, #NAME));    \
+  stmt_set_##NAME##_value.init(db, std::format(sql_set_vec3_value, #NAME));    \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, std::format(sql_get_distinct_vec3_value, #NAME));                    \
+  stmt_copy_##NAME##_value.init(db, std::format(sql_copy_vec3_value, #NAME));
+
+constexpr auto sql_create_table_vec4_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "value_x {1}, value_y {1}, value_z {1}, value_w {1});";
+constexpr auto sql_insert_vec4_value =
+    "INSERT INTO ndf_{0} (value_x, value_y, value_z, value_w) VALUES "
+    "(?,?,?,?);";
+constexpr auto sql_get_vec4_value =
+    "SELECT value_x, value_y, value_z, value_w FROM ndf_{0} WHERE id=?;";
+constexpr auto sql_set_vec4_value =
+    "UPDATE ndf_{0} SET value_x=?, value_y=?, value_z=?, value_w=? WHERE id=?";
+constexpr auto sql_get_distinct_vec4_value =
+    "SELECT DISTINCT ndf_{0}.value_x, ndf_{0}.value_y, ndf_{0}.value_z, "
+    "ndf_{0}.value_w FROM "
+    "ndf_{0} INNER JOIN "
+    "ndf_property ON "
+    "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
+    "ndf_{0}.value_x;";
+constexpr auto sql_copy_vec4_value = "INSERT INTO ndf_{0} (value_x, value_y, "
+                                     "value_z, value_w) SELECT value_x, "
+                                     "value_y, value_z, value_w "
+                                     "FROM ndf_{0} WHERE id=?;";
+
+#define ndf_property_vec4(NAME, DATATYPE)                                      \
+  create_table(#NAME,                                                          \
+               std::format(sql_create_table_vec4_value, #NAME, #DATATYPE));    \
+  stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec4_value, #NAME));  \
+  stmt_get_##NAME##_value.init(db, std::format(sql_get_vec4_value, #NAME));    \
+  stmt_set_##NAME##_value.init(db, std::format(sql_set_vec4_value, #NAME));    \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, std::format(sql_get_distinct_vec4_value, #NAME));                    \
+  stmt_copy_##NAME##_value.init(db, std::format(sql_copy_vec4_value, #NAME));
+
+constexpr auto sql_create_table_color_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "value_r {1}, value_g {1}, value_b {1}, value_a {1});";
+constexpr auto sql_insert_color_value =
+    "INSERT INTO ndf_{0} (value_r, value_g, value_b, value_a) VALUES "
+    "(?,?,?,?);";
+constexpr auto sql_get_color_value =
+    "SELECT value_r, value_g, value_b, value_a FROM ndf_{0} WHERE id=?;";
+constexpr auto sql_set_color_value =
+    "UPDATE ndf_{0} SET value_r=?, value_g=?, value_b=?, value_a=? WHERE id=?";
+constexpr auto sql_get_distinct_color_value =
+    "SELECT DISTINCT ndf_{0}.value_r, ndf_{0}.value_g, ndf_{0}.value_b, "
+    "ndf_{0}.value_a FROM "
+    "ndf_{0} INNER JOIN "
+    "ndf_property ON "
+    "ndf_property.value=ndf_{0}.id WHERE ndf_property.object_id=? ORDER BY "
+    "ndf_{0}.value_r;";
+constexpr auto sql_copy_color_value = "INSERT INTO ndf_{0} (value_r, value_g, "
+                                      "value_b, value_a) SELECT value_r, "
+                                      "value_g, value_b, value_a "
+                                      "FROM ndf_{0} WHERE id=?;";
+
+#define ndf_property_color(NAME, DATATYPE)                                     \
+  create_table(#NAME,                                                          \
+               std::format(sql_create_table_color_value, #NAME, #DATATYPE));   \
+  stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_color_value, #NAME)); \
+  stmt_get_##NAME##_value.init(db, std::format(sql_get_color_value, #NAME));   \
+  stmt_set_##NAME##_value.init(db, std::format(sql_set_color_value, #NAME));   \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, std::format(sql_get_distinct_color_value, #NAME));                   \
+  stmt_copy_##NAME##_value.init(db, std::format(sql_copy_color_value, #NAME));
+
+constexpr auto sql_create_table_reference_value =
+    "CREATE TABLE IF NOT EXISTS ndf_{0} ("
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON "
+    "DELETE SET NULL,"
+    "optional_value TEXT);";
+
+constexpr auto sql_get_reference_value =
+    "SELECT referenced_object, "
+    "optional_value FROM ndf_{0} WHERE id=?;";
+
+constexpr auto sql_insert_reference_value =
+    "INSERT INTO ndf_{0} (referenced_object, optional_value) VALUES (?,?);";
+
+constexpr auto sql_set_reference_value =
+    "UPDATE ndf_{0} SET referenced_object=?, optional_value=? WHERE id=?;";
+
+constexpr auto sql_get_distinct_reference_value =
+    "SELECT DISTINCT referenced_object, "
+    "optional_value FROM ndf_{0} WHERE id=?;";
+
+constexpr auto sql_copy_reference_value =
+    "INSERT INTO ndf_{0} (referenced_object, optional_value) SELECT "
+    "referenced_object, optional_value FROM ndf_{0} WHERE id=?;";
+
+constexpr auto sql_update_references =
+    "UPDATE ndf_{0} "
+    "SET referenced_object=ndf_object.id "
+    "FROM ndf_object "
+    "WHERE referenced_object IS NULL "
+    "AND optional_value=ndf_object.object_name "
+    "AND ndf_object.ndf_id=?;";
+constexpr auto sql_get_referencing =
+    "SELECT DISTINCT prop.object_id FROM ndf_{0} AS ref INNER JOIN "
+    "ndf_property AS prop ON prop.value=ref.id WHERE ref.referenced_object=?;";
+
+#define ndf_property_reference(NAME)                                           \
+  create_table(#NAME, std::format(sql_create_table_reference_value, #NAME));   \
+  stmt_insert_ndf_##NAME.init(db,                                              \
+                              std::format(sql_insert_reference_value, #NAME)); \
+  stmt_get_##NAME##_value.init(db,                                             \
+                               std::format(sql_get_reference_value, #NAME));   \
+  stmt_set_##NAME##_value.init(db,                                             \
+                               std::format(sql_set_reference_value, #NAME));   \
+  stmt_get_distinct_##NAME##_value.init(                                       \
+      db, std::format(sql_get_distinct_reference_value, #NAME));               \
+  stmt_copy_##NAME##_value.init(db,                                            \
+                                std::format(sql_copy_reference_value, #NAME)); \
+  stmt_update_##NAME##_value.init(db,                                          \
+                                  std::format(sql_update_references, #NAME));  \
+  stmt_get_referencing_##NAME##_value.init(                                    \
+      db, std::format(sql_get_referencing, #NAME));
 
 bool NDF_DB::init_statements() {
   // sqlite3_exec(db, "PRAGMA synchronous = FULL", NULL, NULL, NULL);
@@ -83,69 +261,6 @@ bool NDF_DB::init_statements() {
       db,
       R"( SELECT property_name, property_index FROM ndf_class_property INNER JOIN ndf_class ON ndf_class.id=ndf_class_property.class_id WHERE class_name=?; )");
 
-  create_table("ndf_F32_vec2",
-               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec2(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x REAL,
-                                          value_y REAL
-                                          ); )");
-  create_table("ndf_F32_vec3",
-               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec3(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x REAL,
-                                          value_y REAL,
-                                          value_z REAL
-                                          ); )");
-  create_table("ndf_F32_vec4",
-               R"( CREATE TABLE IF NOT EXISTS ndf_F32_vec4(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x REAL,
-                                          value_y REAL,
-                                          value_z REAL,
-                                          value_w REAL
-                                          ); )");
-  create_table("ndf_S32_vec2",
-               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec2(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x INTEGER,
-                                          value_y INTEGER
-                                          ); )");
-  create_table("ndf_S32_vec3",
-               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec3(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x INTEGER,
-                                          value_y INTEGER,
-                                          value_z INTEGER
-                                          ); )");
-  create_table("ndf_S32_vec4",
-               R"( CREATE TABLE IF NOT EXISTS ndf_S32_vec4(
-                                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          value_x INTEGER,
-                                          value_y INTEGER,
-                                          value_z INTEGER,
-                                          value_w INTEGER
-                                          ); )");
-  create_table("ndf_color",
-               R"( CREATE TABLE IF NOT EXISTS ndf_color(
-                                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                           value_r INTEGER,
-                                                           value_g INTEGER,
-                                                           value_b INTEGER,
-                                                           value_a INTEGER
-                                                           ); )");
-  create_table("ndf_object_reference",
-               R"( CREATE TABLE IF NOT EXISTS ndf_object_reference(
-                                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                         referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
-                                         optional_value TEXT
-                                         ); )");
-  create_table("ndf_import_reference",
-               R"( CREATE TABLE IF NOT EXISTS ndf_import_reference(
-                                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    referenced_object INTEGER REFERENCES ndf_object(id) ON UPDATE CASCADE ON DELETE SET NULL,
-                                                    optional_value TEXT
-                                                    ); )");
-
   ndf_property_simple(bool, BOOLEAN);
   ndf_property_simple(uint8, INTEGER);
   ndf_property_simple(int8, INTEGER);
@@ -162,6 +277,17 @@ bool NDF_DB::init_statements() {
   ndf_property_simple(localisation_hash, TEXT);
   ndf_property_simple(hash, TEXT);
 
+  ndf_property_vec2(F32_vec2, REAL);
+  ndf_property_vec2(S32_vec2, INTEGER);
+  ndf_property_vec3(F32_vec3, REAL);
+  ndf_property_vec3(S32_vec3, INTEGER);
+  ndf_property_vec4(F32_vec4, REAL);
+  ndf_property_vec4(S32_vec4, INTEGER);
+  ndf_property_color(color, INTEGER);
+
+  ndf_property_reference(object_reference);
+  ndf_property_reference(import_reference);
+
   // inserters
   stmt_insert_ndf_file.init(
       db,
@@ -172,31 +298,6 @@ bool NDF_DB::init_statements() {
   stmt_insert_ndf_property.init(
       db,
       R"( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, is_import_reference, value) VALUES (?,?,?,?,?,?,?,?); )");
-  stmt_insert_ndf_F32_vec2.init(
-      db, R"( INSERT INTO ndf_F32_vec2 (value_x, value_y) VALUES (?,?); )");
-  stmt_insert_ndf_F32_vec3.init(
-      db,
-      R"( INSERT INTO ndf_f32_vec3 (value_x, value_y, value_z) VALUES (?,?,?); )");
-  stmt_insert_ndf_F32_vec4.init(
-      db,
-      R"( INSERT INTO ndf_F32_vec4 (value_x, value_y, value_z, value_w) VALUES (?,?,?,?); )");
-  stmt_insert_ndf_S32_vec2.init(
-      db, R"( INSERT INTO ndf_S32_vec2 (value_x, value_y) VALUES (?,?); )");
-  stmt_insert_ndf_S32_vec3.init(
-      db,
-      R"( INSERT INTO ndf_S32_vec3 (value_x, value_y, value_z) VALUES (?,?,?); )");
-  stmt_insert_ndf_S32_vec4.init(
-      db,
-      R"( INSERT INTO ndf_S32_vec4 (value_x, value_y, value_z, value_w) VALUES (?,?,?,?); )");
-  stmt_insert_ndf_color.init(
-      db,
-      R"( INSERT INTO ndf_color (value_r, value_g, value_b, value_a) VALUES (?,?,?,?); )");
-  stmt_insert_ndf_object_reference.init(
-      db,
-      R"( INSERT INTO ndf_object_reference (referenced_object, optional_value) VALUES (?,?); )");
-  stmt_insert_ndf_import_reference.init(
-      db,
-      R"( INSERT INTO ndf_import_reference (referenced_object, optional_value) VALUES (?,?); )");
 
   // accessors
   stmt_get_file_from_paths.init(
@@ -232,89 +333,16 @@ bool NDF_DB::init_statements() {
       db,
       R"( SELECT object_id, property_name, property_index, parent, position, type, is_import_reference, value FROM ndf_property WHERE id=?; )");
 
-  // value accessors
-  stmt_get_F32_vec2_value.init(
-      db, R"( SELECT value_x, value_y FROM ndf_F32_vec2 WHERE id=?; )");
-  stmt_get_F32_vec3_value.init(
-      db,
-      R"( SELECT value_x, value_y, value_z FROM ndf_F32_vec3 WHERE id=?; )");
-  stmt_get_F32_vec4_value.init(
-      db,
-      R"( SELECT value_x, value_y, value_z, value_w FROM ndf_F32_vec4 WHERE id=?; )");
-  stmt_get_S32_vec2_value.init(
-      db, R"( SELECT value_x, value_y FROM ndf_S32_vec2 WHERE id=?; )");
-  stmt_get_S32_vec3_value.init(
-      db,
-      R"( SELECT value_x, value_y, value_z FROM ndf_S32_vec3 WHERE id=?; )");
-  stmt_get_S32_vec4_value.init(
-      db,
-      R"( SELECT value_x, value_y, value_z, value_w FROM ndf_S32_vec4 WHERE id=?; )");
-  stmt_get_color_value.init(
-      db,
-      R"( SELECT value_r, value_g, value_b, value_a FROM ndf_color WHERE id=?; )");
-  stmt_get_object_reference_value.init(
-      db,
-      R"( SELECT referenced_object, optional_value FROM ndf_object_reference WHERE id=?; )");
-  stmt_get_import_reference_value.init(
-      db,
-      R"( SELECT referenced_object, optional_value FROM ndf_import_reference WHERE id=?; )");
   // used by list, map and pair
   stmt_get_list_items.init(
       db, R"( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )");
-  stmt_get_objects_referencing.init(
-      db,
-      R"( SELECT DISTINCT prop.object_id FROM ndf_object_reference AS ref INNER JOIN ndf_property AS prop ON prop.value=ref.id WHERE ref.referenced_object=?; )");
-  stmt_get_objects_importing.init(
-      db,
-      R"( SELECT DISTINCT prop.object_id FROM ndf_import_reference AS ref INNER JOIN ndf_property AS prop ON prop.value=ref.id WHERE ref.referenced_object=?; )");
 
   // change values
-  stmt_set_F32_vec2_value.init(
-      db, R"( UPDATE ndf_F32_vec2 SET value_x=?, value_y=? WHERE id=?; )");
-  stmt_set_F32_vec3_value.init(
-      db,
-      R"( UPDATE ndf_F32_vec3 SET value_x=?, value_y=?, value_z=? WHERE id=?; )");
-  stmt_set_F32_vec4_value.init(
-      db,
-      R"( UPDATE ndf_F32_vec4 SET value_x=?, value_y=?, value_z=?, value_w=? WHERE id=?; )");
-  stmt_set_S32_vec2_value.init(
-      db, R"( UPDATE ndf_S32_vec2 SET value_x=?, value_y=? WHERE id=?; )");
-  stmt_set_S32_vec3_value.init(
-      db,
-      R"( UPDATE ndf_S32_vec3 SET value_x=?, value_y=?, value_z=? WHERE id=?; )");
-  stmt_set_S32_vec4_value.init(
-      db,
-      R"( UPDATE ndf_S32_vec4 SET value_x=?, value_y=?, value_z=?, value_w=? WHERE id=?; )");
-  stmt_set_color_value.init(
-      db,
-      R"( UPDATE ndf_color SET value_r=?, value_g=?, value_b=?, value_a=? WHERE id=?; )");
-  stmt_set_object_reference_value.init(
-      db,
-      R"( UPDATE ndf_object_reference SET referenced_object=?,optional_value=? WHERE id=?; )");
-  stmt_set_import_reference_value.init(
-      db,
-      R"( UPDATE ndf_import_reference SET referenced_object=?,optional_value=? WHERE id=?; )");
   // object updates
   stmt_set_object_name.init(
       db, R"( UPDATE ndf_object SET object_name=? WHERE id=?; )");
   stmt_set_object_export_path.init(
       db, R"( UPDATE ndf_object SET export_path=? WHERE id=?; )");
-
-  stmt_update_object_references.init(db,
-                                     R"( UPDATE ndf_object_reference
-                                             SET referenced_object=ndf_object.id
-                                             FROM ndf_object
-                                             WHERE referenced_object IS NULL
-                                             AND optional_value=ndf_object.object_name
-                                             AND ndf_object.ndf_id=?; )");
-  stmt_update_import_references.init(db,
-                                     R"( UPDATE ndf_import_reference
-                                             SET referenced_object=ndf_object.id
-                                             FROM ndf_object
-                                             WHERE referenced_object IS NULL
-                                             AND optional_value=ndf_object.export_path
-                                             AND (ndf_object.ndf_id) IN
-                                             (SELECT id FROM ndf_file WHERE is_current=True); )");
 
   // delete file
   stmt_delete_ndf_file.init(db, R"( DELETE FROM ndf_file WHERE id=?; )");
@@ -470,11 +498,11 @@ bool NDF_DB::change_export_path(int object_id, std::string new_path) {
 
 bool NDF_DB::fix_references(int ndf_id) {
   // update all object references
-  if (!stmt_update_object_references.execute(ndf_id)) {
+  if (!stmt_update_object_reference_value.execute(ndf_id)) {
     return false;
   }
   // update all import references
-  if (!stmt_update_import_references.execute()) {
+  if (!stmt_update_import_reference_value.execute()) {
     return false;
   }
   return true;

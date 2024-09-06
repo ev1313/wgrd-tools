@@ -14,11 +14,76 @@ namespace fs = std::filesystem;
   SQLStatement<1, 0> stmt_insert_ndf_##NAME;                                   \
   SQLStatement<1, 1> stmt_get_##NAME##_value;                                  \
   SQLStatement<2, 0> stmt_set_##NAME##_value;                                  \
-  SQLStatement<1, 1> stmt_get_distinct_##NAME##_value;
+  SQLStatement<1, 1> stmt_get_distinct_##NAME##_value;                         \
+  SQLStatement<1, 0> stmt_copy_##NAME##_value;
+
+#define ndf_property_vec2_def(NAME, DATATYPE)                                  \
+  SQLStatement<2, 0> stmt_insert_ndf_##NAME;                                   \
+  SQLStatement<1, 2> stmt_get_##NAME##_value;                                  \
+  SQLStatement<3, 0> stmt_set_##NAME##_value;                                  \
+  SQLStatement<1, 2> stmt_get_distinct_##NAME##_value;                         \
+  SQLStatement<1, 0> stmt_copy_##NAME##_value;
+
+#define ndf_property_vec3_def(NAME, DATATYPE)                                  \
+  SQLStatement<3, 0> stmt_insert_ndf_##NAME;                                   \
+  SQLStatement<1, 3> stmt_get_##NAME##_value;                                  \
+  SQLStatement<4, 0> stmt_set_##NAME##_value;                                  \
+  SQLStatement<1, 3> stmt_get_distinct_##NAME##_value;                         \
+  SQLStatement<1, 0> stmt_copy_##NAME##_value;
+
+#define ndf_property_vec4_def(NAME, DATATYPE)                                  \
+  SQLStatement<4, 0> stmt_insert_ndf_##NAME;                                   \
+  SQLStatement<1, 4> stmt_get_##NAME##_value;                                  \
+  SQLStatement<5, 0> stmt_set_##NAME##_value;                                  \
+  SQLStatement<1, 4> stmt_get_distinct_##NAME##_value;                         \
+  SQLStatement<1, 0> stmt_copy_##NAME##_value;
+
+#define ndf_property_reference_def(NAME, OBJECT_REFERENCE)                     \
+  SQLStatement<2, 0> stmt_insert_ndf_##NAME;                                   \
+  SQLStatement<1, 2> stmt_get_##NAME##_value;                                  \
+  SQLStatement<2, 0> stmt_set_##NAME##_value;                                  \
+  SQLStatement<1, 2> stmt_get_distinct_##NAME##_value;                         \
+  SQLStatement<1, 0> stmt_copy_##NAME##_value;                                 \
+  SQLStatement<OBJECT_REFERENCE, 0> stmt_update_##NAME##_value;                \
+  SQLStatement<1, 1> stmt_get_referencing_##NAME##_value;
 
 class NDF_DB {
 private:
   sqlite3 *db = nullptr;
+
+  // class db statements
+  SQLStatement<1, 0> stmt_insert_class;
+  SQLStatement<3, 0> stmt_insert_class_property;
+  SQLStatement<2, 1> stmt_get_class_properties;
+  // insertion statements
+  SQLStatement<5, 0> stmt_insert_ndf_file;
+  SQLStatement<5, 0> stmt_insert_ndf_object;
+  SQLStatement<8, 0> stmt_insert_ndf_property;
+  // accessor for files
+  SQLStatement<2, 1> stmt_get_file_from_paths;
+  // accessors for objects
+  SQLStatement<1, 1> stmt_get_object_from_name;
+  SQLStatement<1, 1> stmt_get_object_from_export_path;
+  SQLStatement<1, 1> stmt_get_object_ndf_id;
+  SQLStatement<1, 5> stmt_get_object_full_ndf_id;
+  SQLStatement<1, 1> stmt_get_object_name;
+  SQLStatement<1, 1> stmt_get_object_names;
+  SQLStatement<1, 1> stmt_get_object_class_names;
+  SQLStatement<1, 1> stmt_get_object_export_path;
+  SQLStatement<1, 5> stmt_get_object;
+  SQLStatement<1, 1> stmt_get_object_properties;
+  SQLStatement<1, 1> stmt_get_property_names;
+  SQLStatement<1, 8> stmt_get_property;
+  // accessor used by lists, maps and pairs, returns all associated property ids
+  // in order
+  SQLStatement<1, 1> stmt_get_list_items;
+
+  // object update statements
+  SQLStatement<2, 0> stmt_set_object_name;
+  SQLStatement<2, 0> stmt_set_object_export_path;
+  // delete statements
+  SQLStatement<1, 0> stmt_delete_ndf_file;
+
   // simple properties
   ndf_property_simple_def(bool, BOOLEAN);
   ndf_property_simple_def(uint8, INTEGER);
@@ -36,72 +101,16 @@ private:
   ndf_property_simple_def(localisation_hash, TEXT);
   ndf_property_simple_def(hash, TEXT);
 
-  // class db statements
-  SQLStatement<1, 0> stmt_insert_class;
-  SQLStatement<3, 0> stmt_insert_class_property;
-  SQLStatement<2, 1> stmt_get_class_properties;
-  // insertion statements
-  SQLStatement<5, 0> stmt_insert_ndf_file;
-  SQLStatement<5, 0> stmt_insert_ndf_object;
-  SQLStatement<8, 0> stmt_insert_ndf_property;
-  SQLStatement<2, 0> stmt_insert_ndf_F32_vec2;
-  SQLStatement<3, 0> stmt_insert_ndf_F32_vec3;
-  SQLStatement<4, 0> stmt_insert_ndf_F32_vec4;
-  SQLStatement<2, 0> stmt_insert_ndf_S32_vec2;
-  SQLStatement<3, 0> stmt_insert_ndf_S32_vec3;
-  SQLStatement<4, 0> stmt_insert_ndf_S32_vec4;
-  SQLStatement<4, 0> stmt_insert_ndf_color;
-  SQLStatement<2, 0> stmt_insert_ndf_object_reference;
-  SQLStatement<2, 0> stmt_insert_ndf_import_reference;
-  // accessor for files
-  SQLStatement<2, 1> stmt_get_file_from_paths;
-  // accessors for objects
-  SQLStatement<1, 1> stmt_get_object_from_name;
-  SQLStatement<1, 1> stmt_get_object_from_export_path;
-  SQLStatement<1, 1> stmt_get_object_ndf_id;
-  SQLStatement<1, 5> stmt_get_object_full_ndf_id;
-  SQLStatement<1, 1> stmt_get_object_name;
-  SQLStatement<1, 1> stmt_get_object_names;
-  SQLStatement<1, 1> stmt_get_object_class_names;
-  SQLStatement<1, 1> stmt_get_object_export_path;
-  SQLStatement<1, 5> stmt_get_object;
-  SQLStatement<1, 1> stmt_get_object_properties;
-  SQLStatement<1, 1> stmt_get_property_names;
-  SQLStatement<1, 8> stmt_get_property;
-  // accessors for values, should only return a single row each
-  SQLStatement<1, 2> stmt_get_F32_vec2_value;
-  SQLStatement<1, 3> stmt_get_F32_vec3_value;
-  SQLStatement<1, 4> stmt_get_F32_vec4_value;
-  SQLStatement<1, 2> stmt_get_S32_vec2_value;
-  SQLStatement<1, 3> stmt_get_S32_vec3_value;
-  SQLStatement<1, 4> stmt_get_S32_vec4_value;
-  SQLStatement<1, 4> stmt_get_color_value;
-  SQLStatement<1, 2> stmt_get_object_reference_value;
-  SQLStatement<1, 2> stmt_get_import_reference_value;
-  // accessor used by lists, maps and pairs, returns all associated property ids
-  // in order
-  SQLStatement<1, 1> stmt_get_list_items;
-  SQLStatement<1, 1> stmt_get_objects_referencing;
-  SQLStatement<1, 1> stmt_get_objects_importing;
+  ndf_property_vec2_def(F32_vec2, REAL);
+  ndf_property_vec2_def(S32_vec2, INTEGER);
+  ndf_property_vec3_def(F32_vec3, REAL);
+  ndf_property_vec3_def(S32_vec3, INTEGER);
+  ndf_property_vec4_def(F32_vec4, REAL);
+  ndf_property_vec4_def(S32_vec4, INTEGER);
+  ndf_property_vec4_def(color, INTEGER);
 
-  // update statements
-  SQLStatement<3, 0> stmt_set_F32_vec2_value;
-  SQLStatement<4, 0> stmt_set_F32_vec3_value;
-  SQLStatement<5, 0> stmt_set_F32_vec4_value;
-  SQLStatement<3, 0> stmt_set_S32_vec2_value;
-  SQLStatement<4, 0> stmt_set_S32_vec3_value;
-  SQLStatement<5, 0> stmt_set_S32_vec4_value;
-  SQLStatement<5, 0> stmt_set_color_value;
-  SQLStatement<2, 0> stmt_set_import_reference_value;
-  SQLStatement<2, 0> stmt_set_object_reference_value;
-  // object update statements
-  SQLStatement<2, 0> stmt_set_object_name;
-  SQLStatement<2, 0> stmt_set_object_export_path;
-  // fix references, to be called after inserting objects
-  SQLStatement<1, 0> stmt_update_object_references;
-  SQLStatement<0, 0> stmt_update_import_references;
-  // delete statements
-  SQLStatement<1, 0> stmt_delete_ndf_file;
+  ndf_property_reference_def(object_reference, 1);
+  ndf_property_reference_def(import_reference, 0);
 
   bool init_statements();
 
