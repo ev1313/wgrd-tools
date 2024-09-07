@@ -223,7 +223,8 @@ bool NDF_DB::init_statements() {
                                           object_name TEXT,
                                           class_name TEXT,
                                           export_path TEXT,
-                                          is_top_object BOOLEAN
+                                          is_top_object BOOLEAN,
+                                          UNIQUE (ndf_id, object_name) ON CONFLICT FAIL
                                           ); )");
   create_table("ndf_property",
                R"( CREATE TABLE IF NOT EXISTS ndf_property(
@@ -235,7 +236,7 @@ bool NDF_DB::init_statements() {
                                             position INTEGER,
                                             type INTEGER,
                                             is_import_reference BOOLEAN,
-                                            value INTEGER
+                                            value INTEGER,
                                             ); )");
   // class db
   create_table("ndf_class", R"(
@@ -346,6 +347,7 @@ bool NDF_DB::init_statements() {
 
   // delete file
   stmt_delete_ndf_file.init(db, R"( DELETE FROM ndf_file WHERE id=?; )");
+  stmt_delete_ndf_object.init(db, R"( DELETE FROM ndf_object WHERE id=?; )");
 
   return true;
 }
@@ -569,4 +571,14 @@ NDF_DB::get_only_properties(int object_idx) {
     }
   }
   return ret;
+}
+
+std::optional<size_t> NDF_DB::copy_property(size_t prop_id) {}
+
+std::optional<size_t> NDF_DB::copy_object(size_t obj_id) {
+  auto cpy = get_object(obj_id);
+  if (!cpy.has_value()) {
+    return std::nullopt;
+  }
+  auto cpy_id = insert_object(cpy.value());
 }

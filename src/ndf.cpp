@@ -24,7 +24,9 @@ void NDF::save_as_ndf_xml(fs::path path) {
   doc.save_file(path.c_str());
 }
 
-void NDF::insert_into_db(NDF_DB *db, int ndf_id) {
+void NDF::insert_into_db(NDF_DB *db, size_t ndf_id) {
+  this->db = db;
+  this->ndf_id = ndf_id;
   {
     // FIXME: just init only for all ndf types
     for (int i = 0; i < 0x25; i++) {
@@ -225,15 +227,18 @@ void NDF::load_exprs(std::istream &stream,
   spdlog::debug("Export: {}", obj.export_path);
 }
 
-std::optional<NDFObject> NDF::get_object(NDF_DB *db, int id) {
+std::optional<NDFObject> NDF::get_object(size_t id) {
+  assert(db != nullptr);
   return db->get_object(id);
 }
-std::optional<std::unique_ptr<NDFProperty>> NDF::get_property(NDF_DB *db,
-                                                              int id) {
+std::optional<std::unique_ptr<NDFProperty>> NDF::get_property(size_t id) {
+  assert(db != nullptr);
   return db->get_property(id);
 }
 
-void NDF::load_from_db(NDF_DB *db, int ndf_id) {
+void NDF::load_from_db(NDF_DB *db, size_t ndf_id) {
+  this->db = db;
+  this->ndf_id = ndf_id;
   // load all objects (empty)
   {
     auto begin = std::chrono::high_resolution_clock::now();

@@ -39,6 +39,7 @@ struct NDFObject {
 
   // DB
   size_t db_id = 0;
+  size_t db_ndf_id = 0;
 
 public:
   NDFObject get_copy() {
@@ -61,6 +62,8 @@ public:
 
 struct NDF {
 private:
+  NDF_DB *db = nullptr;
+  size_t ndf_id = 0;
   std::unordered_map<uint32_t, std::vector<NDFProperty *>> db_property_map;
 
 public:
@@ -82,8 +85,16 @@ public:
     object_map.insert({object.name, std::move(object)});
   }
 
-  void insert_into_db(NDF_DB *db, int ndf_id);
-  void load_from_db(NDF_DB *db, int ndf_id);
+  // used for saving to the db
+  void insert_into_db(NDF_DB *db, size_t ndf_id);
+  // used for initializing from the db (e.g. when exporting to ndfbin oder ndf
+  // xml)
+  void load_from_db(NDF_DB *db, size_t ndf_id);
+  // used for just using an existing db w/o initializing anything
+  void set_db(NDF_DB *db, size_t ndf_id) {
+    this->db = db;
+    this->ndf_id = ndf_id;
+  }
 
 private:
   std::vector<std::string> gen_object_items;
@@ -270,6 +281,7 @@ public:
   }
   // db accessors
 public:
-  std::optional<NDFObject> get_object(NDF_DB *db, int id);
-  std::optional<std::unique_ptr<NDFProperty>> get_property(NDF_DB *db, int id);
+  std::optional<NDFObject> get_object(size_t id);
+  std::optional<std::unique_ptr<NDFProperty>> get_property(size_t id);
+  std::optional<size_t> copy_object(size_t id);
 };

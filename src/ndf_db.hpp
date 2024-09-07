@@ -83,6 +83,7 @@ private:
   SQLStatement<2, 0> stmt_set_object_export_path;
   // delete statements
   SQLStatement<1, 0> stmt_delete_ndf_file;
+  SQLStatement<1, 0> stmt_delete_ndf_object;
 
   // simple properties
   ndf_property_simple_def(bool, BOOLEAN);
@@ -170,9 +171,13 @@ public:
   bool change_export_path(int object_idx, std::string new_path);
   bool fix_references(int ndf_id);
 
+  // faster accessors for initialization from and to ndfbin or ndf xml, as this
+  // only calls a single insert call (so sqlite can properly bulk insert)
   std::optional<int> insert_only_object(int ndf_idx, const NDFObject &object);
   std::optional<int> insert_only_property(const NDFProperty &property);
   std::optional<std::vector<NDFObject>> get_only_objects(int ndf_idx);
   std::optional<std::vector<std::unique_ptr<NDFProperty>>>
   get_only_properties(int object_idx);
+
+  std::optional<size_t> copy_object(size_t obj_id);
 };
