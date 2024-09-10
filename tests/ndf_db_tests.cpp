@@ -159,9 +159,15 @@ bool check_object_equality(NDFObject *obj1, NDFObject *obj2) {
 }
 
 TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
-  SECTION("test adding and reading an object") {
+  SECTION("test ndf_file table contains stash file") {
     NDF_DB db;
     db.init();
+    auto stash_ndf_id_opt = db.get_file(":stash:", ":stash:");
+    REQUIRE(stash_ndf_id_opt.has_value());
+  }
+  SECTION("test adding and reading an object") {
+    NDF_DB db;
+    db.init("/tmp/test.db");
     // create test file
     auto ndf_file_id_opt =
         db.insert_file("$/test/file.ndfbin", "/tmp/foo", "/tmp/bar", "test");
@@ -177,16 +183,18 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     ndf_generator::add_random_list(obj1);
     ndf_generator::add_object_reference(obj1, "test_object");
     ndf_generator::add_import_reference(obj1, "$/foo/bar");
+    obj1.db_ndf_id = ndf_file_id;
 
     // insert into DB
     spdlog::info("add obj1");
-    auto obj_id_opt = db.insert_object(ndf_file_id, obj1);
+    auto obj_id_opt = db.insert_object(obj1);
     REQUIRE(obj_id_opt.has_value());
     auto obj_id = obj_id_opt.value();
 
     spdlog::info("check obj1");
     // now check the DB contains the correct values
     auto db_obj = db.get_object(obj_id);
+    spdlog::debug("loaded object {}", obj_id);
     REQUIRE(db_obj.has_value());
     REQUIRE(check_object_equality(&obj1, &db_obj.value()));
   }
@@ -207,6 +215,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     obj.class_name = "TTestClass";
     obj.is_top_object = true;
     obj.export_path = "$/test/object";
+    obj.db_ndf_id = ndf_file_id;
     // add properties to test object
     ndf_generator::add_random_uint8(obj);
     ndf_generator::add_random_uint16(obj);
@@ -214,7 +223,7 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     ndf_generator::add_random_list(obj);
     ndf_generator::add_object_reference(obj, "test_object");
     ndf_generator::add_import_reference(obj, "$/test/object1");
-    auto obj_id_opt = db.insert_object(ndf_file_id, obj);
+    auto obj_id_opt = db.insert_object(obj);
     REQUIRE(obj_id_opt.has_value());
     auto obj_id = obj_id_opt.value();
     spdlog::info("creating obj1");
@@ -223,13 +232,14 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     obj1.class_name = "TTestClass";
     obj1.is_top_object = true;
     obj1.export_path = "$/test/object1";
+    obj1.db_ndf_id = ndf_file_id;
     // add properties to test object
     ndf_generator::add_random_uint8(obj1);
     ndf_generator::add_random_uint16(obj1);
     ndf_generator::add_random_uint32(obj1);
     ndf_generator::add_random_list(obj1);
     ndf_generator::add_object_reference(obj1, "test_object_2");
-    auto obj1_id_opt = db.insert_object(ndf_file_id, obj1);
+    auto obj1_id_opt = db.insert_object(obj1);
     REQUIRE(obj1_id_opt.has_value());
     auto obj1_id = obj1_id_opt.value();
 
@@ -239,8 +249,9 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     obj2.class_name = "TInt";
     obj2.is_top_object = false;
     obj2.export_path = "$/test/object2";
+    obj2.db_ndf_id = ndf_file_id;
     ndf_generator::add_random_uint8(obj2);
-    auto obj2_id_opt = db.insert_object(ndf_file_id, obj2);
+    auto obj2_id_opt = db.insert_object(obj2);
     REQUIRE(obj2_id_opt.has_value());
     auto obj2_id = obj2_id_opt.value();
     db.fix_references(ndf_file_id);
@@ -288,18 +299,39 @@ TEST_CASE_PERSISTENT_FIXTURE(PyFixture, "ndf_db tests", "[ndf_db]") {
     REQUIRE(ndf_file_id_opt.has_value());
     auto ndf_file_id = ndf_file_id_opt.value();
 
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int x = 0; x < 16000; x++) {
-      NDFObject obj;
-      obj.name = "ndf_object_" + std::to_string(x);
-      obj.class_name = "TTestClass";
-      obj.export_path = "$/test/object" + std::to_string(x);
-      obj.is_top_object = x % 99;
-      db.insert_only_object(ndf_file_id, obj);
+    {
+      auto start = std::chrono::high_resolution_clock::now();
+      for (int x = 0; x < 160000; x++) {
+        NDFObject obj;
+        obj.name = "ndf_object_" + std::to_string(x);
+        obj.class_name = "TTestClass";
+        obj.export_path = "$/test/object" + std::to_string(x);
+        obj.is_top_object = x % 99;
+        db.insert_only_object(ndf_file_id, obj);
+      }
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      spdlog::info("elapsed time inserting objects: {}",
+                   elapsed_seconds.count());
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    spdlog::info("elapsed time: {}", elapsed_seconds.count());
+    {
+      auto start = std::chrono::high_resolution_clock::now();
+      auto object_names_opt = db.get_object_names(ndf_file_id);
+      REQUIRE(object_names_opt);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      spdlog::info("elapsed time getting all object names: {}",
+                   elapsed_seconds.count());
+    }
+    {
+      auto start = std::chrono::high_resolution_clock::now();
+      auto objects_opt = db.get_only_objects(ndf_file_id);
+      REQUIRE(objects_opt);
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsed_seconds = end - start;
+      spdlog::info("elapsed time getting all objects: {}",
+                   elapsed_seconds.count());
+    }
   }
 
   SECTION("load generated test files and check they are parsed and builded "

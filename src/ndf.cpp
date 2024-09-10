@@ -285,3 +285,32 @@ void NDF::load_from_db(NDF_DB *db, size_t ndf_id) {
   // load all properties
   spdlog::debug("finished NDF db");
 }
+
+void NDF::change_object_name(size_t object_id, std::string name) {
+  if (!db->change_object_name(object_id, name)) {
+    spdlog::error("failed to change object name");
+  }
+}
+
+void NDF::change_export_path(size_t object_id, std::string export_path) {
+  if (!db->change_export_path(object_id, export_path)) {
+    spdlog::error("failed to change object export_path");
+  }
+}
+
+void NDF::change_top_object(size_t object_id, bool top_object) {
+  if (!db->change_is_top_object(object_id, top_object)) {
+    spdlog::error("failed to change object top_object");
+  }
+}
+
+void NDF::remove_object(size_t object_id, bool permanently) {
+  if (permanently) {
+    db->remove_object(object_id);
+  } else {
+    db->move_object(object_id);
+  }
+}
+void NDF::restore_object(size_t object_id) {
+  db->move_object(object_id, ndf_id);
+}

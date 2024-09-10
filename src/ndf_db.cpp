@@ -1,6 +1,7 @@
 #include "ndf_db.hpp"
 #include "sqlite_helpers.hpp"
 
+#include <cstddef>
 #include <optional>
 #include <spdlog/spdlog.h>
 
@@ -207,6 +208,7 @@ bool NDF_DB::init_statements() {
   sqlite3_exec(db, "PRAGMA optimize = 0x10002", NULL, NULL, NULL);
   sqlite3_exec(db, "PRAGMA cache_size = -10240", NULL, NULL, NULL);
   sqlite3_exec(db, "PRAGMA page_size = 32768", NULL, NULL, NULL);
+  // NDF File
   create_table("ndf_file",
                R"( CREATE TABLE IF NOT EXISTS ndf_file(
                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,6 +218,11 @@ bool NDF_DB::init_statements() {
                                             game_version TEXT,
                                             is_current BOOLEAN
                                             ); )");
+  stmt_insert_ndf_file.init(
+      db,
+      R"( INSERT INTO ndf_file (vfs_path, dat_path, fs_path, game_version, is_current) VALUES (?,?,?,?,?); )");
+  stmt_delete_ndf_file.init(db, R"( DELETE FROM ndf_file WHERE id=?; )");
+  // NDF Object
   create_table("ndf_object",
                R"( CREATE TABLE IF NOT EXISTS ndf_object(
                                           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -226,6 +233,43 @@ bool NDF_DB::init_statements() {
                                           is_top_object BOOLEAN,
                                           UNIQUE (ndf_id, object_name) ON CONFLICT FAIL
                                           ); )");
+  stmt_insert_ndf_object.init(
+      db,
+      R"( INSERT INTO ndf_object (ndf_id, object_name, class_name, export_path, is_top_object) VALUES (?,?,?,?,?); )");
+  stmt_get_file_from_paths.init(
+      db, R"( SELECT id FROM ndf_file WHERE vfs_path=? AND fs_path=?; )");
+  stmt_get_object_from_name.init(
+      db, R"( SELECT id FROM ndf_object WHERE object_name=?; )");
+  stmt_get_object_from_export_path.init(
+      db, R"( SELECT id FROM ndf_object WHERE export_path=?; )");
+  stmt_get_object_ndf_id.init(db,
+                              R"( SELECT ndf_id FROM ndf_object WHERE id=?; )");
+  stmt_get_object_full_ndf_id.init(
+      db,
+      R"( SELECT id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE ndf_id=?; )");
+  stmt_get_object_name.init(
+      db, R"( SELECT object_name FROM ndf_object WHERE id=?; )");
+  stmt_get_object_names.init(
+      db, R"( SELECT object_name FROM ndf_object WHERE ndf_id=?; )");
+  stmt_get_object_class_names.init(
+      db, R"( SELECT DISTINCT class_name FROM ndf_object WHERE ndf_id=?; )");
+  stmt_get_object_export_path.init(
+      db, R"( SELECT export_path FROM ndf_object WHERE id=?; )");
+  stmt_get_object_top_object.init(
+      db, R"( SELECT is_top_object FROM ndf_object WHERE id=?; )");
+  stmt_get_object.init(
+      db,
+      R"( SELECT ndf_id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE id=?; )");
+  stmt_set_object_ndf_id.init(
+      db, R"( UPDATE ndf_object SET ndf_id=? WHERE id=?; )");
+  stmt_set_object_name.init(
+      db, R"( UPDATE ndf_object SET object_name=? WHERE id=?; )");
+  stmt_set_object_export_path.init(
+      db, R"( UPDATE ndf_object SET export_path=? WHERE id=?; )");
+  stmt_set_object_top_object.init(
+      db, R"( UPDATE ndf_object SET is_top_object=? WHERE id=?; )");
+  stmt_delete_ndf_object.init(db, R"( DELETE FROM ndf_object WHERE id=?; )");
+  // NDF Property
   create_table("ndf_property",
                R"( CREATE TABLE IF NOT EXISTS ndf_property(
                                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -236,8 +280,25 @@ bool NDF_DB::init_statements() {
                                             position INTEGER,
                                             type INTEGER,
                                             is_import_reference BOOLEAN,
-                                            value INTEGER,
+                                            value INTEGER
                                             ); )");
+  stmt_insert_ndf_property.init(
+      db,
+      R"( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, is_import_reference, value) VALUES (?,?,?,?,?,?,?,?); )");
+  stmt_get_object_properties.init(
+      db,
+      R"( SELECT id FROM ndf_property WHERE object_id=? AND parent IS NULL; )");
+  stmt_get_property_names.init(
+      db,
+      R"( SELECT property_name FROM ndf_property WHERE object_id=? AND property_index<>-1; )");
+
+  stmt_get_property.init(
+      db,
+      R"( SELECT object_id, property_name, property_index, parent, position, type, is_import_reference, value FROM ndf_property WHERE id=?; )");
+
+  // used by list, map and pair
+  stmt_get_list_items.init(
+      db, R"( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )");
   // class db
   create_table("ndf_class", R"(
       CREATE TABLE IF NOT EXISTS ndf_class(
@@ -245,6 +306,8 @@ bool NDF_DB::init_statements() {
         class_name TEXT
       );
   )");
+  stmt_insert_class.init(db,
+                         R"( INSERT INTO ndf_class (class_name) VALUES (?); )");
   create_table("ndf_class_property", R"(
       CREATE TABLE IF NOT EXISTS ndf_class_property(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -253,8 +316,6 @@ bool NDF_DB::init_statements() {
         property_index INTEGER
       );
   )");
-  stmt_insert_class.init(db,
-                         R"( INSERT INTO ndf_class (class_name) VALUES (?); )");
   stmt_insert_class_property.init(
       db,
       R"( INSERT INTO ndf_class_property (class_id, property_name, property_index) VALUES (?, ?, ?); )");
@@ -289,65 +350,18 @@ bool NDF_DB::init_statements() {
   ndf_property_reference(object_reference);
   ndf_property_reference(import_reference);
 
-  // inserters
-  stmt_insert_ndf_file.init(
-      db,
-      R"( INSERT INTO ndf_file (vfs_path, dat_path, fs_path, game_version, is_current) VALUES (?,?,?,?,?); )");
-  stmt_insert_ndf_object.init(
-      db,
-      R"( INSERT INTO ndf_object (ndf_id, object_name, class_name, export_path, is_top_object) VALUES (?,?,?,?,?); )");
-  stmt_insert_ndf_property.init(
-      db,
-      R"( INSERT INTO ndf_property (object_id, property_name, property_index, parent, position, type, is_import_reference, value) VALUES (?,?,?,?,?,?,?,?); )");
-
-  // accessors
-  stmt_get_file_from_paths.init(
-      db, R"( SELECT id FROM ndf_file WHERE vfs_path=? AND fs_path=?; )");
-  stmt_get_object_from_name.init(
-      db, R"( SELECT id FROM ndf_object WHERE object_name=?; )");
-  stmt_get_object_from_export_path.init(
-      db, R"( SELECT id FROM ndf_object WHERE export_path=?; )");
-  stmt_get_object_ndf_id.init(db,
-                              R"( SELECT ndf_id FROM ndf_object WHERE id=?; )");
-  stmt_get_object_full_ndf_id.init(
-      db,
-      R"( SELECT id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE ndf_id=?; )");
-  stmt_get_object_name.init(
-      db, R"( SELECT object_name FROM ndf_object WHERE id=?; )");
-  stmt_get_object_names.init(
-      db, R"( SELECT object_name FROM ndf_object WHERE ndf_id=?; )");
-  stmt_get_object_class_names.init(
-      db, R"( SELECT DISTINCT class_name FROM ndf_object WHERE ndf_id=?; )");
-  stmt_get_object_export_path.init(
-      db, R"( SELECT export_path FROM ndf_object WHERE id=?; )");
-  stmt_get_object.init(
-      db,
-      R"( SELECT ndf_id, object_name, class_name, export_path, is_top_object FROM ndf_object WHERE id=?; )");
-  stmt_get_object_properties.init(
-      db,
-      R"( SELECT id FROM ndf_property WHERE object_id=? AND parent IS NULL; )");
-  stmt_get_property_names.init(
-      db,
-      R"( SELECT property_name FROM ndf_property WHERE object_id=? AND property_index<>-1; )");
-
-  stmt_get_property.init(
-      db,
-      R"( SELECT object_id, property_name, property_index, parent, position, type, is_import_reference, value FROM ndf_property WHERE id=?; )");
-
-  // used by list, map and pair
-  stmt_get_list_items.init(
-      db, R"( SELECT id FROM ndf_property WHERE parent=? ORDER BY position; )");
-
-  // change values
-  // object updates
-  stmt_set_object_name.init(
-      db, R"( UPDATE ndf_object SET object_name=? WHERE id=?; )");
-  stmt_set_object_export_path.init(
-      db, R"( UPDATE ndf_object SET export_path=? WHERE id=?; )");
-
-  // delete file
-  stmt_delete_ndf_file.init(db, R"( DELETE FROM ndf_file WHERE id=?; )");
-  stmt_delete_ndf_object.init(db, R"( DELETE FROM ndf_object WHERE id=?; )");
+  // check if the stash file exists in the database
+  auto stash_ndf_id_opt = get_file(":stash:", ":stash:");
+  if (!stash_ndf_id_opt) {
+    // file does not exist
+    stash_ndf_id_opt =
+        insert_file(":stash:", ":stash:", ":stash:", ":stash:", false);
+    if (!stash_ndf_id_opt) {
+      spdlog::error("Could not insert stash file into database");
+      return false;
+    }
+  }
+  stash_ndf_id = stash_ndf_id_opt.value();
 
   return true;
 }
@@ -388,38 +402,37 @@ bool NDF_DB::create_table(std::string name, std::string query) {
   return true;
 }
 
-std::optional<int> NDF_DB::insert_file(std::string vfs_path,
-                                       std::string dat_path,
-                                       std::string fs_path, std::string version,
-                                       bool is_current) {
+std::optional<size_t>
+NDF_DB::insert_file(std::string vfs_path, std::string dat_path,
+                    std::string fs_path, std::string version, bool is_current) {
   return stmt_insert_ndf_file.insert(vfs_path, dat_path, fs_path, version,
                                      is_current);
 }
 
-bool NDF_DB::delete_file(int ndf_id) {
+bool NDF_DB::delete_file(size_t ndf_id) {
   return stmt_delete_ndf_file.execute(ndf_id);
 }
 
-std::optional<int> NDF_DB::insert_object(int ndf_idx, const NDFObject &object) {
-  auto object_id =
-      stmt_insert_ndf_object.insert(ndf_idx, object.name, object.class_name,
-                                    object.export_path, object.is_top_object);
+std::optional<size_t> NDF_DB::insert_object(NDFObject &object) {
+  auto object_id = stmt_insert_ndf_object.insert(
+      object.db_ndf_id, object.name, object.class_name, object.export_path,
+      object.is_top_object);
   if (!object_id.has_value()) {
     return std::nullopt;
   }
 
   for (auto &prop : object.properties) {
-    insert_property(*prop, *object_id);
+    prop->db_object_id = object_id.value();
+    insert_property(*prop);
   }
   return object_id;
 }
 
-bool NDF_DB::insert_objects(int ndf_idx,
-                            const std::vector<NDFObject> &objects) {
+bool NDF_DB::insert_objects(std::vector<NDFObject> &objects) {
   {
     SQLTransaction trans(db);
     for (auto &obj : objects) {
-      if (!insert_object(ndf_idx, obj)) {
+      if (!insert_object(obj)) {
         trans.rollback();
         return false;
       }
@@ -428,28 +441,50 @@ bool NDF_DB::insert_objects(int ndf_idx,
   return true;
 }
 
-bool NDF_DB::insert_property(const NDFProperty &property, int object_id,
-                             int parent, int position) {
-  return false;
+bool NDF_DB::insert_property(NDFProperty &property) {
+  // insert the value
+  auto ret = property.to_ndf_db(this);
+  if (!ret) {
+    spdlog::error("Could not insert property into database");
+    return false;
+  }
+  // lists/maps/pairs create their own property entry
+  if (property.is_list() || property.is_map() || property.is_pair()) {
+    return true;
+  }
+  if (!property.db_value_id) {
+    spdlog::error("Property value not inserted into database?");
+    return false;
+  }
+  // insert the property
+  auto prop_ret = property.add_db_property(this);
+  if (!prop_ret) {
+    spdlog::error("Could not insert property into database");
+    return false;
+  }
+  return true;
 }
 
-std::optional<int> NDF_DB::get_file(std::string vfs_path, std::string fs_path) {
+std::optional<size_t> NDF_DB::get_file(std::string vfs_path,
+                                       std::string fs_path) {
   return stmt_get_file_from_paths.query_single<int>(vfs_path, fs_path);
 }
 
-std::optional<NDFObject> NDF_DB::get_object(int object_idx) {
+std::optional<NDFObject> NDF_DB::get_object(size_t object_idx) {
   auto obj_data_opt = stmt_get_object.query_single<
       std::tuple<int, std::string, std::string, std::string, bool>>(object_idx);
   if (!obj_data_opt) {
     return std::nullopt;
   }
   NDFObject ret;
-  auto [_, object_name, class_name, export_path, is_top_object] =
+  auto [ndf_id, object_name, class_name, export_path, is_top_object] =
       obj_data_opt.value();
   ret.name = object_name;
   ret.class_name = class_name;
   ret.export_path = export_path;
   ret.is_top_object = is_top_object;
+  ret.db_id = object_idx;
+  ret.db_ndf_id = ndf_id;
 
   // get list of all properties in this object (only direct properties, not list
   // items etc.)
@@ -468,8 +503,13 @@ std::optional<NDFObject> NDF_DB::get_object(int object_idx) {
   return ret;
 }
 
+std::optional<std::vector<std::string>>
+NDF_DB::get_object_names(size_t ndf_id) {
+  return stmt_get_object_names.query<std::string>(ndf_id);
+}
+
 std::optional<std::unique_ptr<NDFProperty>>
-NDF_DB::get_property(int property_id) {
+NDF_DB::get_property(size_t property_id) {
   // get property type
   auto property = NDFProperty::get_db_property_type(this, property_id);
   if (!property) {
@@ -482,7 +522,7 @@ NDF_DB::get_property(int property_id) {
   return property;
 }
 
-bool NDF_DB::change_object_name(int object_id, std::string new_name) {
+bool NDF_DB::change_object_name(size_t object_id, std::string new_name) {
   // update to the new name
   if (!stmt_set_object_name.execute(new_name, object_id)) {
     return false;
@@ -490,7 +530,7 @@ bool NDF_DB::change_object_name(int object_id, std::string new_name) {
   return true;
 }
 
-bool NDF_DB::change_export_path(int object_id, std::string new_path) {
+bool NDF_DB::change_export_path(size_t object_id, std::string new_path) {
   // update to the new export_path
   if (!stmt_set_object_export_path.execute(new_path, object_id)) {
     return false;
@@ -498,7 +538,15 @@ bool NDF_DB::change_export_path(int object_id, std::string new_path) {
   return true;
 }
 
-bool NDF_DB::fix_references(int ndf_id) {
+bool NDF_DB::change_is_top_object(size_t object_id, bool is_top_object) {
+  // update to the new export_path
+  if (!stmt_set_object_top_object.execute(is_top_object, object_id)) {
+    return false;
+  }
+  return true;
+}
+
+bool NDF_DB::fix_references(size_t ndf_id) {
   // update all object references
   if (!stmt_update_object_reference_value.execute(ndf_id)) {
     return false;
@@ -510,8 +558,8 @@ bool NDF_DB::fix_references(int ndf_id) {
   return true;
 }
 
-std::optional<int> NDF_DB::insert_only_object(int ndf_idx,
-                                              const NDFObject &object) {
+std::optional<size_t> NDF_DB::insert_only_object(size_t ndf_idx,
+                                                 const NDFObject &object) {
   auto object_id =
       stmt_insert_ndf_object.insert(ndf_idx, object.name, object.class_name,
                                     object.export_path, object.is_top_object);
@@ -521,7 +569,8 @@ std::optional<int> NDF_DB::insert_only_object(int ndf_idx,
   return object_id.value();
 }
 
-std::optional<int> NDF_DB::insert_only_property(const NDFProperty &property) {
+std::optional<size_t>
+NDF_DB::insert_only_property(const NDFProperty &property) {
   auto property_id = property.add_db_property(this);
   if (!property_id.has_value()) {
     return false;
@@ -529,7 +578,7 @@ std::optional<int> NDF_DB::insert_only_property(const NDFProperty &property) {
   return property_id.value();
 }
 
-std::optional<std::vector<NDFObject>> NDF_DB::get_only_objects(int ndf_id) {
+std::optional<std::vector<NDFObject>> NDF_DB::get_only_objects(size_t ndf_id) {
   auto objects_opt = stmt_get_object_full_ndf_id.query<
       std::tuple<size_t, std::string, std::string, std::string, bool>>(ndf_id);
   if (!objects_opt) {
@@ -546,14 +595,16 @@ std::optional<std::vector<NDFObject>> NDF_DB::get_only_objects(int ndf_id) {
     obj.export_path = export_path;
     obj.is_top_object = is_top_object;
     obj.db_id = db_id;
+#ifdef DEBUG
     spdlog::debug("loading object {} {}", db_id, obj.name);
+#endif
     ret.push_back(std::move(obj));
   }
   return ret;
 }
 
 std::optional<std::vector<std::unique_ptr<NDFProperty>>>
-NDF_DB::get_only_properties(int object_idx) {
+NDF_DB::get_only_properties(size_t object_idx) {
   auto prop_ids_opt = stmt_get_object_properties.query<int>(object_idx);
   if (!prop_ids_opt.has_value()) {
     spdlog::error("did not find properties {}", object_idx);
@@ -573,12 +624,22 @@ NDF_DB::get_only_properties(int object_idx) {
   return ret;
 }
 
-std::optional<size_t> NDF_DB::copy_property(size_t prop_id) {}
-
-std::optional<size_t> NDF_DB::copy_object(size_t obj_id) {
+std::optional<size_t> NDF_DB::copy_object(size_t obj_id, std::string new_name) {
   auto cpy = get_object(obj_id);
   if (!cpy.has_value()) {
     return std::nullopt;
   }
-  auto cpy_id = insert_object(cpy.value());
+  cpy.value().name = new_name;
+  return insert_object(cpy.value());
+}
+
+bool NDF_DB::remove_object(size_t obj_id) {
+  return stmt_delete_ndf_object.execute(obj_id);
+}
+
+bool NDF_DB::move_object(size_t obj_id, size_t new_ndf_id) {
+  if (new_ndf_id == 0) {
+    new_ndf_id = stash_ndf_id;
+  }
+  return stmt_set_object_ndf_id.execute(new_ndf_id, obj_id);
 }

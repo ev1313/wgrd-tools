@@ -284,4 +284,9 @@ public:
   std::optional<NDFObject> get_object(size_t id);
   std::optional<std::unique_ptr<NDFProperty>> get_property(size_t id);
   std::optional<size_t> copy_object(size_t id);
+  void remove_object(size_t object_id, bool permanently = false);
+  void restore_object(size_t object_id);
+  void change_object_name(size_t object_id, std::string name);
+  void change_export_path(size_t object_id, std::string export_path);
+  void change_top_object(size_t object_id, bool top_object);
 };
