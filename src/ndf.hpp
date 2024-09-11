@@ -40,6 +40,7 @@ struct NDFObject {
   // DB
   size_t db_id = 0;
   size_t db_ndf_id = 0;
+  size_t modifications = 0;
 
 public:
   NDFObject get_copy() {
@@ -64,6 +65,7 @@ struct NDF {
 private:
   NDF_DB *db = nullptr;
   size_t ndf_id = 0;
+  size_t ndf_modifications = 0;
   std::unordered_map<uint32_t, std::vector<NDFProperty *>> db_property_map;
 
 public:

@@ -17,9 +17,16 @@ constexpr auto sql_get_distinct_value =
     "ndf_{0}.value;";
 constexpr auto sql_copy_value =
     "INSERT INTO ndf_{0} (value) SELECT value FROM ndf_{0} WHERE id=?;";
+// modified trigger for all non list/map/pair properties
+constexpr auto sql_trigger_property =
+    "CREATE TRIGGER IF NOT EXISTS ndf_property_update_{0} AFTER UPDATE ON "
+    "ndf_{0} BEGIN "
+    "UPDATE ndf_property SET modifications=modifications+1 WHERE value=old.id; "
+    "END;";
 
 #define ndf_property_simple(NAME, DATATYPE)                                    \
   create_table(#NAME, std::format(sql_create_table_value, #NAME, #DATATYPE));  \
+  create_table(#NAME, std::format(sql_trigger_property, #NAME));               \
   stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_value, #NAME));       \
   stmt_get_##NAME##_value.init(db, std::format(sql_get_value, #NAME));         \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_value, #NAME));         \
@@ -48,6 +55,7 @@ constexpr auto sql_copy_vec2_value =
 #define ndf_property_vec2(NAME, DATATYPE)                                      \
   create_table(#NAME,                                                          \
                std::format(sql_create_table_vec2_value, #NAME, #DATATYPE));    \
+  create_table(#NAME, std::format(sql_trigger_property, #NAME));               \
   stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec2_value, #NAME));  \
   stmt_get_##NAME##_value.init(db, std::format(sql_get_vec2_value, #NAME));    \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_vec2_value, #NAME));    \
@@ -78,6 +86,7 @@ constexpr auto sql_copy_vec3_value =
 #define ndf_property_vec3(NAME, DATATYPE)                                      \
   create_table(#NAME,                                                          \
                std::format(sql_create_table_vec3_value, #NAME, #DATATYPE));    \
+  create_table(#NAME, std::format(sql_trigger_property, #NAME));               \
   stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec3_value, #NAME));  \
   stmt_get_##NAME##_value.init(db, std::format(sql_get_vec3_value, #NAME));    \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_vec3_value, #NAME));    \
@@ -110,6 +119,7 @@ constexpr auto sql_copy_vec4_value = "INSERT INTO ndf_{0} (value_x, value_y, "
 #define ndf_property_vec4(NAME, DATATYPE)                                      \
   create_table(#NAME,                                                          \
                std::format(sql_create_table_vec4_value, #NAME, #DATATYPE));    \
+  create_table(#NAME, std::format(sql_trigger_property, #NAME));               \
   stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_vec4_value, #NAME));  \
   stmt_get_##NAME##_value.init(db, std::format(sql_get_vec4_value, #NAME));    \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_vec4_value, #NAME));    \
@@ -142,6 +152,7 @@ constexpr auto sql_copy_color_value = "INSERT INTO ndf_{0} (value_r, value_g, "
 #define ndf_property_color(NAME, DATATYPE)                                     \
   create_table(#NAME,                                                          \
                std::format(sql_create_table_color_value, #NAME, #DATATYPE));   \
+  create_table(#NAME, std::format(sql_trigger_property, #NAME));               \
   stmt_insert_ndf_##NAME.init(db, std::format(sql_insert_color_value, #NAME)); \
   stmt_get_##NAME##_value.init(db, std::format(sql_get_color_value, #NAME));   \
   stmt_set_##NAME##_value.init(db, std::format(sql_set_color_value, #NAME));   \
@@ -216,6 +227,7 @@ bool NDF_DB::init_statements() {
                                             dat_path TEXT,
                                             fs_path TEXT,
                                             game_version TEXT,
+                                            modifications INTEGER DEFAULT 1,
                                             is_current BOOLEAN
                                             ); )");
   stmt_insert_ndf_file.init(
@@ -231,6 +243,7 @@ bool NDF_DB::init_statements() {
                                           class_name TEXT,
                                           export_path TEXT,
                                           is_top_object BOOLEAN,
+                                          modifications INTEGER DEFAULT 1,
                                           UNIQUE (ndf_id, object_name) ON CONFLICT FAIL
                                           ); )");
   stmt_insert_ndf_object.init(
@@ -251,6 +264,9 @@ bool NDF_DB::init_statements() {
       db, R"( SELECT object_name FROM ndf_object WHERE id=?; )");
   stmt_get_object_names.init(
       db, R"( SELECT object_name FROM ndf_object WHERE ndf_id=?; )");
+  stmt_get_object_ids_and_names_filtered.init(
+      db,
+      R"( SELECT id, object_name FROM ndf_object WHERE ndf_id=? AND object_name LIKE CONCAT('%', ?, '%') AND class_name LIKE CONCAT('%', ?, '%'); )");
   stmt_get_object_class_names.init(
       db, R"( SELECT DISTINCT class_name FROM ndf_object WHERE ndf_id=?; )");
   stmt_get_object_export_path.init(
@@ -280,7 +296,8 @@ bool NDF_DB::init_statements() {
                                             position INTEGER,
                                             type INTEGER,
                                             is_import_reference BOOLEAN,
-                                            value INTEGER
+                                            value INTEGER,
+                                            modifications INTEGER DEFAULT 1
                                             ); )");
   stmt_insert_ndf_property.init(
       db,
@@ -306,6 +323,17 @@ bool NDF_DB::init_statements() {
         class_name TEXT
       );
   )");
+
+  create_table("ndf_property_trigger",
+               "CREATE TRIGGER IF NOT EXISTS ndf_property_trigger AFTER UPDATE "
+               "ON ndf_property BEGIN UPDATE ndf_object SET "
+               "modifications=modifications+1 WHERE id=new.object_id; END;");
+
+  create_table("ndf_object_trigger",
+               "CREATE TRIGGER IF NOT EXISTS ndf_object_trigger AFTER UPDATE "
+               "ON ndf_object BEGIN UPDATE ndf_file SET "
+               "modifications=modifications+1 WHERE id=new.ndf_id; END;");
+
   stmt_insert_class.init(db,
                          R"( INSERT INTO ndf_class (class_name) VALUES (?); )");
   create_table("ndf_class_property", R"(
@@ -506,6 +534,15 @@ std::optional<NDFObject> NDF_DB::get_object(size_t object_idx) {
 std::optional<std::vector<std::string>>
 NDF_DB::get_object_names(size_t ndf_id) {
   return stmt_get_object_names.query<std::string>(ndf_id);
+}
+
+std::optional<std::vector<std::tuple<size_t, std::string>>>
+NDF_DB::get_object_ids_and_names_filtered(size_t ndf_id,
+                                          std::string object_filter,
+                                          std::string class_filter) {
+  return stmt_get_object_ids_and_names_filtered
+      .query<std::tuple<size_t, std::string>>(ndf_id, object_filter,
+                                              class_filter);
 }
 
 std::optional<std::unique_ptr<NDFProperty>>

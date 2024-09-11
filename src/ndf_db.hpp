@@ -68,6 +68,7 @@ private:
   SQLStatement<1, 5> stmt_get_object_full_ndf_id;
   SQLStatement<1, 1> stmt_get_object_name;
   SQLStatement<1, 1> stmt_get_object_names;
+  SQLStatement<1, 1> stmt_get_object_ids_and_names_filtered;
   SQLStatement<1, 1> stmt_get_object_class_names;
   SQLStatement<1, 1> stmt_get_object_export_path;
   SQLStatement<1, 1> stmt_get_object_top_object;
@@ -163,6 +164,9 @@ public:
   bool insert_objects(std::vector<NDFObject> &objects);
   std::optional<NDFObject> get_object(size_t object_idx);
   std::optional<std::vector<std::string>> get_object_names(size_t ndf_id);
+  std::optional<std::vector<std::tuple<size_t, std::string>>>
+  get_object_ids_and_names_filtered(size_t ndf_id, std::string object_filter,
+                                    std::string class_filter);
   std::optional<size_t> copy_object(size_t obj_id, std::string new_name);
   bool move_object(size_t obj_id, size_t new_ndf_id = 0);
   bool remove_object(size_t obj_id);
