@@ -37,11 +37,6 @@ struct NDFObject {
     return properties.at(property_map.at(name));
   }
 
-  // DB
-  size_t db_id = 0;
-  size_t db_ndf_id = 0;
-  size_t modifications = 0;
-
 public:
   NDFObject get_copy() {
     NDFObject ret;
@@ -59,15 +54,44 @@ public:
     property_map.insert({property->property_name, properties.size()});
     properties.push_back(std::move(property));
   }
+  void fix_references(const std::string &old_name,
+                      const std::string &new_name) {
+    for (auto &prop : properties) {
+      if (prop->is_list() || prop->is_map() || prop->is_pair() ||
+          prop->is_object_reference()) {
+        prop->fix_references(old_name, new_name);
+      }
+    }
+  }
+  void
+  fix_references(const std::unordered_map<std::string, std::string> &renames) {
+    for (auto &prop : properties) {
+      if (prop->is_list() || prop->is_map() || prop->is_pair() ||
+          prop->is_object_reference()) {
+        prop->fix_references(renames);
+      }
+    }
+  }
+  std::unordered_set<std::string> get_object_references() {
+    std::unordered_set<std::string> ret;
+    for (auto const &prop : properties) {
+      auto refs = prop->get_object_references();
+      ret.insert(refs.begin(), refs.end());
+    }
+    return ret;
+  }
+  std::unordered_set<std::string> get_import_references() {
+    std::unordered_set<std::string> ret;
+    for (auto const &prop : properties) {
+      auto refs = prop->get_import_references();
+      ret.insert(refs.begin(), refs.end());
+    }
+    return ret;
+  }
 };
 
 struct NDF {
 private:
-  NDF_DB *db = nullptr;
-  size_t ndf_id = 0;
-  size_t ndf_modifications = 0;
-  std::unordered_map<uint32_t, std::vector<NDFProperty *>> db_property_map;
-
 public:
   std::map<unsigned int, std::string> import_name_table;
   std::vector<std::string> string_table;
@@ -85,17 +109,6 @@ public:
 
   void add_object(NDFObject object) {
     object_map.insert({object.name, std::move(object)});
-  }
-
-  // used for saving to the db
-  void insert_into_db(NDF_DB *db, size_t ndf_id);
-  // used for initializing from the db (e.g. when exporting to ndfbin oder ndf
-  // xml)
-  void load_from_db(NDF_DB *db, size_t ndf_id);
-  // used for just using an existing db w/o initializing anything
-  void set_db(NDF_DB *db, size_t ndf_id) {
-    this->db = db;
-    this->ndf_id = ndf_id;
   }
 
 private:
@@ -158,13 +171,91 @@ private:
     }
     return obj_idx->second;
   }
-  friend struct NDFPropertyObjectReference;
-  friend struct NDFPropertyImportReference;
+  friend class NDFPropertyObjectReference;
+  friend class NDFPropertyImportReference;
 
 public:
   NDFObject &get_object(const std::string &str) { return object_map.at(str); }
 
-private:
+  bool change_object_name(const std::string &previous_name,
+                          const std::string &name, bool fix_references = true) {
+    if (object_map.contains(name)) {
+      spdlog::warn("change_object_name: object {} does already exist", name);
+      return false;
+    }
+    if (!object_map.contains(previous_name)) {
+      spdlog::warn("change_object_name: object {} does not exist",
+                   previous_name);
+      return false;
+    }
+    auto &object = get_object(previous_name);
+    const auto it = object_map.find(previous_name);
+    object_map[name] = object.get_copy();
+    object_map[name].name = name;
+    object_map.erase(it);
+
+    if (fix_references) {
+      for (auto it = object_map.begin(); it != object_map.end(); ++it) {
+        it.value().fix_references(previous_name, name);
+      }
+    }
+    return true;
+  }
+
+  bool bulk_rename_objects(
+      const std::unordered_map<std::string, std::string> &renames,
+      bool fix_references = true) {
+    for (const auto &[previous_name, name] : renames) {
+      if (object_map.contains(name)) {
+        spdlog::warn("change_object_name: object {} does already exist", name);
+        return false;
+      }
+      if (!object_map.contains(previous_name)) {
+        spdlog::warn("change_object_name: object {} does not exist",
+                     previous_name);
+        return false;
+      }
+      auto &object = get_object(previous_name);
+      const auto it = object_map.find(previous_name);
+      object_map[name] = object.get_copy();
+      object_map[name].name = name;
+      object_map.erase(it);
+    }
+
+    if (fix_references) {
+      for (auto it = object_map.begin(); it != object_map.end(); ++it) {
+        it.value().fix_references(renames);
+      }
+    }
+
+    return true;
+  }
+
+  bool copy_object(const std::string &obj_name, const std::string &new_name) {
+    if (object_map.contains(new_name)) {
+      spdlog::warn("copy_object: object {} does already exist", new_name);
+      return false;
+    }
+    if (!object_map.contains(obj_name)) {
+      spdlog::warn("copy_object: object {} does not exist", obj_name);
+      return false;
+    }
+    auto &object = get_object(obj_name);
+    auto new_object = object.get_copy();
+    new_object.name = new_name;
+    object_map.insert({new_name, std::move(new_object)});
+    return true;
+  }
+
+  bool remove_object(const std::string &name) {
+    if (!object_map.contains(name)) {
+      spdlog::warn("remove_object: object {} does not exist", name);
+      return false;
+    }
+    object_map.erase(name);
+    return true;
+  }
+
   uint32_t get_or_add_string(const std::string &str) {
     auto it = gen_string_table.find(str);
     if (it == gen_string_table.end()) {
@@ -227,35 +318,7 @@ private:
     }
     return get_or_add_expr_indices(vec, object_idx);
   }
-  friend struct NDFProperty;
-  friend struct NDFPropertyBool;
-  friend struct NDFPropertyUInt8;
-  friend struct NDFPropertyInt8;
-  friend struct NDFPropertyUInt16;
-  friend struct NDFPropertyInt16;
-  friend struct NDFPropertyUInt32;
-  friend struct NDFPropertyInt32;
-  friend struct NDFPropertyFloat32;
-  friend struct NDFPropertyFloat64;
-  friend struct NDFPropertyString;
-  friend struct NDFPropertyWideString;
-  friend struct NDFPropertyF32_vec2;
-  friend struct NDFPropertyF32_vec3;
-  friend struct NDFPropertyF32_vec4;
-  friend struct NDFPropertyS32_vec2;
-  friend struct NDFPropertyS32_vec3;
-  friend struct NDFPropertyColor;
-  friend struct NDFPropertyImportReference;
-  friend struct NDFPropertyObjectReference;
-  friend struct NDFPropertyGUID;
-  friend struct NDFPropertyPathReference;
-  friend struct NDFPropertyLocalisationHash;
-  friend struct NDFPropertyHash;
-  friend struct NDFPropertyList;
-  friend struct NDFPropertyMap;
-  friend struct NDFPropertyPair;
 
-public:
   void load_from_ndfbin_stream(std::istream &stream);
   void load_from_ndfbin(fs::path path);
   void save_as_ndfbin_stream(std::ostream &stream);
@@ -281,14 +344,4 @@ public:
     gen_export_items.clear();
     gen_property_table.clear();
   }
-  // db accessors
-public:
-  std::optional<NDFObject> get_object(size_t id);
-  std::optional<std::unique_ptr<NDFProperty>> get_property(size_t id);
-  std::optional<size_t> copy_object(size_t id);
-  void remove_object(size_t object_id, bool permanently = false);
-  void restore_object(size_t object_id);
-  void change_object_name(size_t object_id, std::string name);
-  void change_export_path(size_t object_id, std::string export_path);
-  void change_top_object(size_t object_id, bool top_object);
 };

@@ -2,14 +2,13 @@
 
 #include "spdlog/spdlog.h"
 #include <memory>
-#include <optional>
 #include <pugixml.hpp>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-struct NDF;
+class NDF;
 
 enum NDFPropertyType : uint32_t {
   Bool = 0x0,
@@ -42,18 +41,7 @@ enum NDFPropertyType : uint32_t {
   Hash = 0x25
 };
 
-class NDF_DB;
-
 struct NDFProperty {
-  // db stuff
-  size_t db_object_id = 0;
-  // used for properties in lists/maps/pairs only
-  std::optional<size_t> db_parent = std::nullopt;
-  // only relevant together with db_parent
-  std::optional<size_t> db_position = std::nullopt;
-  // is NULL for list/map/pair properties
-  std::optional<size_t> db_value_id = std::nullopt;
-  //
   uint32_t property_idx;
   uint32_t property_type;
   std::string property_name;
@@ -64,10 +52,8 @@ struct NDFProperty {
   static std::unique_ptr<NDFProperty>
   get_property_from_ndf_xml(uint32_t ndf_type, const pugi::xml_node &ndf_node);
   static std::unique_ptr<NDFProperty>
-  get_property_from_ndf_db(uint32_t ndf_type, bool is_import_reference);
-  static std::unique_ptr<NDFProperty>
   get_property_from_ndfbin(uint32_t ndf_type, std::istream &stream);
-  virtual void to_ndf_xml(pugi::xml_node &) const {
+  virtual void to_ndf_xml(pugi::xml_node &) {
     throw std::runtime_error("Not implemented");
   }
   virtual void from_ndf_xml(const pugi::xml_node &) {
@@ -76,43 +62,32 @@ struct NDFProperty {
   virtual void from_ndfbin(NDF *, std::istream &) {
     throw std::runtime_error("Not implemented");
   }
-  virtual void to_ndfbin(NDF *, std::ostream &) const {
+  virtual void to_ndfbin(NDF *, std::ostream &) {
     throw std::runtime_error("Not implemented");
   }
-  virtual bool to_ndf_db(NDF_DB *) {
-    throw std::runtime_error("Not implemented");
-  }
-  virtual bool from_ndf_db(NDF_DB *, int) {
-    throw std::runtime_error("Not implemented");
-  }
-  virtual bool is_object_reference() const { return false; }
-  virtual bool is_import_reference() const { return false; }
-  virtual bool is_list() const { return false; }
-  virtual bool is_map() const { return false; }
-  virtual bool is_pair() const { return false; }
+  virtual bool is_object_reference() { return false; }
+  virtual bool is_import_reference() { return false; }
+  virtual bool is_list() { return false; }
+  virtual bool is_map() { return false; }
+  virtual bool is_pair() { return false; }
   virtual std::unique_ptr<NDFProperty> get_copy() = 0;
+  virtual void fix_references(const std::string &, const std::string &) {}
+  virtual void
+  fix_references(const std::unordered_map<std::string, std::string> &) {}
   virtual std::string as_string() = 0;
-
-  // used by ndf_db
-  int get_db_property_value(NDF_DB *db, int property_id);
-  static std::unique_ptr<NDFProperty>
-  get_db_property_type(NDF_DB *db, int prop_id, int pos = -1);
-  std::optional<int> add_db_property(NDF_DB *db) const;
+  virtual std::unordered_set<std::string> get_object_references() { return {}; }
+  virtual std::unordered_set<std::string> get_import_references() { return {}; }
 };
 
 struct NDFPropertyBool : NDFProperty {
   bool value;
   NDFPropertyBool() { property_type = NDFPropertyType::Bool; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, bool new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyBool>(*this);
@@ -123,58 +98,14 @@ struct NDFPropertyBool : NDFProperty {
 struct NDFPropertyUInt8 : NDFProperty {
   uint8_t value;
   NDFPropertyUInt8() { property_type = NDFPropertyType::UInt8; }
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, uint8_t new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyUInt8>(*this);
-  }
-  std::string as_string() override { return std::to_string(value); }
-};
-
-struct NDFPropertyInt16 : NDFProperty {
-  int16_t value;
-  NDFPropertyInt16() { property_type = NDFPropertyType::Int16; }
-
-  void to_ndf_xml(pugi::xml_node &node) const override;
-  void from_ndf_xml(const pugi::xml_node &node) override;
-
-  void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, int16_t new_value);
-
-  std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyInt16>(*this);
-  }
-  std::string as_string() override { return std::to_string(value); }
-};
-
-struct NDFPropertyUInt16 : NDFProperty {
-  uint16_t value;
-  NDFPropertyUInt16() { property_type = NDFPropertyType::UInt16; }
-
-  void to_ndf_xml(pugi::xml_node &node) const override;
-  void from_ndf_xml(const pugi::xml_node &node) override;
-
-  void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, uint16_t new_value);
-
-  std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyUInt16>(*this);
   }
   std::string as_string() override { return std::to_string(value); }
 };
@@ -183,15 +114,11 @@ struct NDFPropertyInt32 : NDFProperty {
   int32_t value;
   NDFPropertyInt32() { property_type = NDFPropertyType::Int32; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, int32_t new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyInt32>(*this);
@@ -203,15 +130,11 @@ struct NDFPropertyUInt32 : NDFProperty {
   uint32_t value;
   NDFPropertyUInt32() { property_type = NDFPropertyType::UInt32; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, uint32_t new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyUInt32>(*this);
@@ -223,15 +146,11 @@ struct NDFPropertyFloat32 : NDFProperty {
   float value;
   NDFPropertyFloat32() { property_type = NDFPropertyType::Float32; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, float new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyFloat32>(*this);
@@ -243,15 +162,11 @@ struct NDFPropertyFloat64 : NDFProperty {
   double value;
   NDFPropertyFloat64() { property_type = NDFPropertyType::Float64; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, double new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyFloat64>(*this);
@@ -263,16 +178,14 @@ struct NDFPropertyString : NDFProperty {
   std::string value;
   NDFPropertyString() { property_type = NDFPropertyType::String; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
+public:
   void from_ndfbin(NDF *root, std::istream &stream) override;
-  void to_ndfbin(NDF *root, std::ostream &stream) const override;
+  void to_ndfbin(NDF *root, std::ostream &stream) override;
 
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
-
+public:
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyString>(*this);
   }
@@ -282,42 +195,16 @@ struct NDFPropertyString : NDFProperty {
 struct NDFPropertyWideString : NDFProperty {
   std::string value;
   NDFPropertyWideString() { property_type = NDFPropertyType::WideString; }
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *root, std::istream &stream) override;
-  void to_ndfbin(NDF *root, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *root, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyWideString>(*this);
   }
   std::string as_string() override { return value; }
-};
-
-struct NDFPropertyF32_vec2 : NDFProperty {
-  float x;
-  float y;
-  NDFPropertyF32_vec2() { property_type = NDFPropertyType::F32_vec2; }
-
-  void to_ndf_xml(pugi::xml_node &node) const override;
-  void from_ndf_xml(const pugi::xml_node &node) override;
-
-  void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, float new_value_x,
-                    float new_value_y);
-
-  std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyF32_vec2>(*this);
-  }
-  std::string as_string() override { return fmt::format("({}, {})", x, y); }
 };
 
 struct NDFPropertyF32_vec3 : NDFProperty {
@@ -326,16 +213,11 @@ struct NDFPropertyF32_vec3 : NDFProperty {
   float z;
   NDFPropertyF32_vec3() { property_type = NDFPropertyType::F32_vec3; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, float new_value_x,
-                    float new_value_y, float new_value_z);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyF32_vec3>(*this);
@@ -352,16 +234,11 @@ struct NDFPropertyF32_vec4 : NDFProperty {
   float w;
   NDFPropertyF32_vec4() { property_type = NDFPropertyType::F32_vec4; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, float new_value_x,
-                    float new_value_y, float new_value_z, float new_value_w);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyF32_vec4>(*this);
@@ -378,17 +255,11 @@ struct NDFPropertyColor : NDFProperty {
   uint8_t a;
   NDFPropertyColor() { property_type = NDFPropertyType::Color; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, uint8_t new_value_r,
-                    uint8_t new_value_g, uint8_t new_value_b,
-                    uint8_t new_value_a);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyColor>(*this);
@@ -398,44 +269,17 @@ struct NDFPropertyColor : NDFProperty {
   }
 };
 
-struct NDFPropertyS32_vec2 : NDFProperty {
-  int32_t x;
-  int32_t y;
-  NDFPropertyS32_vec2() { property_type = NDFPropertyType::S32_vec2; }
-
-  void to_ndf_xml(pugi::xml_node &node) const override;
-  void from_ndf_xml(const pugi::xml_node &node) override;
-
-  void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, int32_t new_value_x,
-                    int32_t new_value_y);
-
-  std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyS32_vec2>(*this);
-  }
-  std::string as_string() override { return fmt::format("({}, {})", x, y); }
-};
-
 struct NDFPropertyS32_vec3 : NDFProperty {
   int32_t x;
   int32_t y;
   int32_t z;
   NDFPropertyS32_vec3() { property_type = NDFPropertyType::S32_vec3; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, int32_t new_value_x,
-                    int32_t new_value_y, int32_t new_value_z);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyS32_vec3>(*this);
@@ -453,17 +297,28 @@ struct NDFPropertyObjectReference : NDFProperty {
     property_type = NDFPropertyType::ObjectReference;
   }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_object_reference() const override { return true; }
+  bool is_object_reference() override { return true; }
+  void fix_references(const std::string &old_name,
+                      const std::string &new_name) override {
+    if (object_name == old_name) {
+      object_name = new_name;
+    }
+  }
+  void fix_references(
+      const std::unordered_map<std::string, std::string> &renames) override {
+    if (renames.contains(object_name)) {
+      object_name = renames.at(object_name);
+    }
+  }
+  std::unordered_set<std::string> get_object_references() override {
+    return {object_name};
+  }
 
   void from_ndfbin(NDF *root, std::istream &stream) override;
-  void to_ndfbin(NDF *root, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *root, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyObjectReference>(*this);
@@ -477,17 +332,16 @@ struct NDFPropertyImportReference : NDFProperty {
     property_type = NDFPropertyType::ImportReference;
   }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_import_reference() const override { return true; }
+  bool is_import_reference() override { return true; }
+  std::unordered_set<std::string> get_import_references() override {
+    return {import_name};
+  }
 
   void from_ndfbin(NDF *root, std::istream &stream) override;
-  void to_ndfbin(NDF *root, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *root, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyImportReference>(*this);
@@ -499,16 +353,41 @@ struct NDFPropertyList : NDFProperty {
   std::vector<std::unique_ptr<NDFProperty>> values;
   NDFPropertyList() { property_type = NDFPropertyType::List; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_list() const override { return true; }
+  bool is_list() override { return true; }
+  void fix_references(const std::string &old_name,
+                      const std::string &new_name) override {
+    for (auto &value : values) {
+      value->fix_references(old_name, new_name);
+    }
+  }
+  void fix_references(
+      const std::unordered_map<std::string, std::string> &renames) override {
+    for (auto &value : values) {
+      value->fix_references(renames);
+    }
+  }
+  std::unordered_set<std::string> get_object_references() override {
+    std::unordered_set<std::string> ret;
+    for (auto const &value : values) {
+      auto value_refs = value->get_object_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
+  }
+  std::unordered_set<std::string> get_import_references() override {
+    std::unordered_set<std::string> ret;
+    for (auto const &value : values) {
+      auto value_refs = value->get_import_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
+  }
 
   void from_ndfbin(NDF *, std::istream &) override;
-  void to_ndfbin(NDF *, std::ostream &) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
+  void to_ndfbin(NDF *, std::ostream &) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyList>();
@@ -531,16 +410,47 @@ struct NDFPropertyMap : NDFProperty {
       values;
   NDFPropertyMap() { property_type = NDFPropertyType::Map; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_map() const override { return true; }
+  bool is_map() override { return true; }
+  void fix_references(const std::string &old_name,
+                      const std::string &new_name) override {
+    for (auto const &[key, value] : values) {
+      key->fix_references(old_name, new_name);
+      value->fix_references(old_name, new_name);
+    }
+  }
+  void fix_references(
+      const std::unordered_map<std::string, std::string> &renames) override {
+    for (auto const &[key, value] : values) {
+      key->fix_references(renames);
+      value->fix_references(renames);
+    }
+  }
+  std::unordered_set<std::string> get_object_references() override {
+    std::unordered_set<std::string> ret;
+    for (auto const &[key, value] : values) {
+      auto key_refs = key->get_object_references();
+      ret.insert(key_refs.begin(), key_refs.end());
+      auto value_refs = value->get_object_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
+  }
+  std::unordered_set<std::string> get_import_references() override {
+    std::unordered_set<std::string> ret;
+    for (auto const &[key, value] : values) {
+      auto key_refs = key->get_import_references();
+      ret.insert(key_refs.begin(), key_refs.end());
+      auto value_refs = value->get_import_references();
+      ret.insert(value_refs.begin(), value_refs.end());
+    }
+    return ret;
+  }
 
   void from_ndfbin(NDF *, std::istream &) override;
-  void to_ndfbin(NDF *, std::ostream &) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
+  void to_ndfbin(NDF *, std::ostream &) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyMap>();
@@ -557,20 +467,48 @@ struct NDFPropertyMap : NDFProperty {
   }
 };
 
+struct NDFPropertyInt16 : NDFProperty {
+  int16_t value;
+  NDFPropertyInt16() { property_type = NDFPropertyType::Int16; }
+
+  void to_ndf_xml(pugi::xml_node &node) override;
+  void from_ndf_xml(const pugi::xml_node &node) override;
+
+  void from_ndfbin(NDF *, std::istream &stream) override;
+  void to_ndfbin(NDF *, std::ostream &stream) override;
+
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyInt16>(*this);
+  }
+  std::string as_string() override { return std::to_string(value); }
+};
+
+struct NDFPropertyUInt16 : NDFProperty {
+  uint16_t value;
+  NDFPropertyUInt16() { property_type = NDFPropertyType::UInt16; }
+
+  void to_ndf_xml(pugi::xml_node &node) override;
+  void from_ndf_xml(const pugi::xml_node &node) override;
+
+  void from_ndfbin(NDF *, std::istream &stream) override;
+  void to_ndfbin(NDF *, std::ostream &stream) override;
+
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyUInt16>(*this);
+  }
+  std::string as_string() override { return std::to_string(value); }
+};
+
 // FIXME: error checking for GUIDs?
 struct NDFPropertyGUID : NDFProperty {
   std::string guid;
   NDFPropertyGUID() { property_type = NDFPropertyType::NDFGUID; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyGUID>(*this);
@@ -582,15 +520,11 @@ struct NDFPropertyPathReference : NDFProperty {
   std::string path;
   NDFPropertyPathReference() { property_type = NDFPropertyType::PathReference; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &) override;
-  void to_ndfbin(NDF *, std::ostream &) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *, std::ostream &) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyPathReference>(*this);
@@ -605,15 +539,11 @@ struct NDFPropertyLocalisationHash : NDFProperty {
     property_type = NDFPropertyType::LocalisationHash;
   }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     return std::make_unique<NDFPropertyLocalisationHash>(*this);
@@ -621,25 +551,38 @@ struct NDFPropertyLocalisationHash : NDFProperty {
   std::string as_string() override { return hash; }
 };
 
-// FIXME: error checking for hashes?
-struct NDFPropertyHash : NDFProperty {
-  std::string hash;
-  NDFPropertyHash() { property_type = NDFPropertyType::Hash; }
+struct NDFPropertyS32_vec2 : NDFProperty {
+  int32_t x;
+  int32_t y;
+  NDFPropertyS32_vec2() { property_type = NDFPropertyType::S32_vec2; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
   void from_ndfbin(NDF *, std::istream &stream) override;
-  void to_ndfbin(NDF *, std::ostream &stream) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
-  bool change_value(NDF_DB *db, int property_id, std::string new_value);
+  void to_ndfbin(NDF *, std::ostream &stream) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
-    return std::make_unique<NDFPropertyHash>(*this);
+    return std::make_unique<NDFPropertyS32_vec2>(*this);
   }
-  std::string as_string() override { return hash; }
+  std::string as_string() override { return fmt::format("({}, {})", x, y); }
+};
+
+struct NDFPropertyF32_vec2 : NDFProperty {
+  float x;
+  float y;
+  NDFPropertyF32_vec2() { property_type = NDFPropertyType::F32_vec2; }
+
+  void to_ndf_xml(pugi::xml_node &node) override;
+  void from_ndf_xml(const pugi::xml_node &node) override;
+
+  void from_ndfbin(NDF *, std::istream &stream) override;
+  void to_ndfbin(NDF *, std::ostream &stream) override;
+
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyF32_vec2>(*this);
+  }
+  std::string as_string() override { return fmt::format("({}, {})", x, y); }
 };
 
 struct NDFPropertyPair : NDFProperty {
@@ -647,16 +590,39 @@ struct NDFPropertyPair : NDFProperty {
   std::unique_ptr<NDFProperty> second;
   NDFPropertyPair() { property_type = NDFPropertyType::Pair; }
 
-  void to_ndf_xml(pugi::xml_node &node) const override;
+  void to_ndf_xml(pugi::xml_node &node) override;
   void from_ndf_xml(const pugi::xml_node &node) override;
 
-  bool is_pair() const override { return true; }
+  bool is_pair() override { return true; }
+  void fix_references(const std::string &old_name,
+                      const std::string &new_name) override {
+    first->fix_references(old_name, new_name);
+    second->fix_references(old_name, new_name);
+  }
+  void fix_references(
+      const std::unordered_map<std::string, std::string> &renames) override {
+    first->fix_references(renames);
+    second->fix_references(renames);
+  }
+  std::unordered_set<std::string> get_object_references() override {
+    std::unordered_set<std::string> ret;
+    auto first_refs = first->get_object_references();
+    ret.insert(first_refs.begin(), first_refs.end());
+    auto second_refs = second->get_object_references();
+    ret.insert(second_refs.begin(), second_refs.end());
+    return ret;
+  }
+  std::unordered_set<std::string> get_import_references() override {
+    std::unordered_set<std::string> ret;
+    auto first_refs = first->get_import_references();
+    ret.insert(first_refs.begin(), first_refs.end());
+    auto second_refs = second->get_import_references();
+    ret.insert(second_refs.begin(), second_refs.end());
+    return ret;
+  }
 
   void from_ndfbin(NDF *, std::istream &) override;
-  void to_ndfbin(NDF *, std::ostream &) const override;
-
-  bool from_ndf_db(NDF_DB *db, int property_id) override;
-  bool to_ndf_db(NDF_DB *db) override;
+  void to_ndfbin(NDF *, std::ostream &) override;
 
   std::unique_ptr<NDFProperty> get_copy() override {
     auto ret = std::make_unique<NDFPropertyPair>();
@@ -670,4 +636,21 @@ struct NDFPropertyPair : NDFProperty {
   std::string as_string() override {
     return fmt::format("({}, {})", first->as_string(), second->as_string());
   }
+};
+
+// FIXME: error checking for hashes?
+struct NDFPropertyHash : NDFProperty {
+  std::string hash;
+  NDFPropertyHash() { property_type = NDFPropertyType::Hash; }
+
+  void to_ndf_xml(pugi::xml_node &node) override;
+  void from_ndf_xml(const pugi::xml_node &node) override;
+
+  void from_ndfbin(NDF *, std::istream &stream) override;
+  void to_ndfbin(NDF *, std::ostream &stream) override;
+
+  std::unique_ptr<NDFProperty> get_copy() override {
+    return std::make_unique<NDFPropertyHash>(*this);
+  }
+  std::string as_string() override { return hash; }
 };
