@@ -68,7 +68,7 @@ private:
   SQLStatement<1, 5> stmt_get_object_full_ndf_id;
   SQLStatement<1, 1> stmt_get_object_name;
   SQLStatement<1, 1> stmt_get_object_names;
-  SQLStatement<1, 1> stmt_get_object_ids_and_names_filtered;
+  SQLStatement<3, 2> stmt_get_object_ids_and_names_filtered;
   SQLStatement<1, 1> stmt_get_object_class_names;
   SQLStatement<1, 1> stmt_get_object_export_path;
   SQLStatement<1, 1> stmt_get_object_top_object;
