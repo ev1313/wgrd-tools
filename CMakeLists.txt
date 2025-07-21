@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22...3.25)
 project(wgrd-tools LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -g -O0 -DFORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS -fasynchronous-unwind-tables -fexceptions -fstack-clash-protection -fstack-protector-all -fstack-protector-strong -grecord-gcc-switches -fcf-protection -pipe -Werror=format-security")
@@ -21,6 +21,8 @@ add_subdirectory(deps/spdlog)
 add_subdirectory(deps/fmt)
 add_subdirectory(deps/pugixml)
 add_subdirectory(deps/ordered-map)
+
+find_package(SQLite3 REQUIRED)
 
 # add version information
 find_package(Git)
@@ -41,6 +43,10 @@ add_library(ndf STATIC
     src/ndfbin.cpp
     src/ndf_bin_properties.cpp
     src/ndf_xml_properties.cpp
+    src/ndf_db_properties.cpp
+    src/ndf_db.hpp
+    src/ndf_db.cpp
+    src/sqlite_helpers.hpp
 )
 target_link_libraries(ndf
     PUBLIC
@@ -49,17 +55,19 @@ target_link_libraries(ndf
     fmt::fmt
     pugixml::pugixml
     fmt::fmt
-    tsl::ordered_map)
+    tsl::ordered_map
+    SQLite::SQLite3
+)
 target_include_directories(ndf
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
 
-add_executable(ndfbin_helper
-        src/ndfbin_helper.cpp
-)
-target_link_libraries(ndfbin_helper PRIVATE -static ndf)
+#add_executable(ndfbin_helper
+#        src/ndfbin_helper.cpp
+#)
+#target_link_libraries(ndfbin_helper PRIVATE ndf)
 
 option(BUILD_TESTS "Build tests" OFF)
 if(${BUILD_TESTS})
@@ -71,6 +79,19 @@ if(${BUILD_TESTS})
     tests/generator.cpp
 )
     target_link_libraries(tests_generator
+        PUBLIC
+        Catch2::Catch2WithMain
+        Python3::Python
+        pybind11::pybind11
+        ndf
+    )
+
+    add_executable(tests
+        tests/generator.cpp
+        tests/sqlite_tests.cpp
+        tests/ndf_db_tests.cpp
+    )
+    target_link_libraries(tests
         PUBLIC
         Catch2::Catch2WithMain
         Python3::Python
