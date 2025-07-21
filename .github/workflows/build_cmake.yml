@@ -20,7 +20,7 @@ jobs:
         run: |
           echo 'Running in MSYS2!'
           ./ci-build.sh
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ndfbin_helper.exe
           path: build/ndfbin_helper.exe
