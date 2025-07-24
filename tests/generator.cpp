@@ -83,9 +83,9 @@ void create_edat(fs::path path,
       py::module::import("wgrd_cons_parsers.edat").attr("EdatMain")();
 
   // as the EdatMain uses the . instead of [] for accessing, we need the
-  // dingsda Container
+  // conshex Container
   py::object container =
-      py::module::import("dingsda.lib.containers").attr("Container");
+      py::module::import("conshex.lib.containers").attr("Container");
   py::dict args = py::dict();
   args["no_alignment"] = true;
   args["disable_checksums"] = true;
